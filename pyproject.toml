@@ -63,6 +63,15 @@ src = ["src", "tests"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 
+[tool.ruff.lint.per-file-ignores]
+# These scripts insert `src` onto sys.path before importing the local package (so
+# they run from a checkout without an install) -- the import genuinely can't move
+# above that, so E402 here is expected, not a lint gap. `make lint`/`make check`
+# only scan src/tests (see Makefile), so this was only ever caught by pre-commit's
+# --all-files run, not the sandbox quality gate -- worth knowing if this happens
+# again for a future scripts/*.py file.
+"scripts/*.py" = ["E402"]
+
 [tool.mypy]
 python_version = "3.10"
 strict = true

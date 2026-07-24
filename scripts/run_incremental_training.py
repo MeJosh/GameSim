@@ -50,8 +50,7 @@ from gamesim.experiments.incremental import (
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Run a baseline plus a fixed number of doubling-length incremental "
-            "PPO training stages."
+            "Run a baseline plus a fixed number of doubling-length incremental PPO training stages."
         )
     )
     parser.add_argument(
