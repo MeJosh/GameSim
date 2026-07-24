@@ -181,9 +181,7 @@ class SelfPlayEnv(gym.Env[npt.NDArray[np.float32], int], Generic[Observation]):
         self, action: int
     ) -> tuple[npt.NDArray[np.float32], SupportsFloat, bool, bool, dict[str, Any]]:
         if not (0 <= action < self._num_actions) or not self._current_mask[action]:
-            raise ValueError(
-                f"illegal action for learner (agent {self._learner_agent}): {action}"
-            )
+            raise ValueError(f"illegal action for learner (agent {self._learner_agent}): {action}")
 
         result = self._engine.step(self._learner_agent, action)
         terminated = result.terminal

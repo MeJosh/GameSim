@@ -53,7 +53,7 @@ class _SequencePlayer:
         return column
 
     def as_opponent(self) -> OpponentPolicy:
-        def _policy(observation: np.ndarray, mask: ActionMask) -> int:  # type: ignore[type-arg]
+        def _policy(observation: np.ndarray, mask: ActionMask) -> int:
             del observation
             column = self.next_column()
             assert mask[column], f"scripted opponent move {column} was illegal"

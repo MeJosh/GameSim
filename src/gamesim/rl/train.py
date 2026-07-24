@@ -41,12 +41,24 @@ this slice -- see plans/phase-02-drl-selfplay.md).
 from __future__ import annotations
 
 import argparse
+import time
 from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Generic
 
 import numpy as np
 import numpy.typing as npt
+from rich.console import Console
+from rich.progress import (
+    BarColumn,
+    MofNCompleteColumn,
+    Progress,
+    TaskID,
+    TaskProgressColumn,
+    TextColumn,
+    TimeElapsedColumn,
+    TimeRemainingColumn,
+)
 
 from gamesim.core.types import ActionMask, Observation
 from gamesim.games.connect_four import ConnectFourEncoder, ConnectFourEngine
@@ -65,6 +77,7 @@ if TYPE_CHECKING:
 
 DEFAULT_CHECKPOINT_DIR = Path("checkpoints")
 DEFAULT_CHECKPOINT_NAME = "connect_four_maskable_ppo"
+PROGRESS_UPDATE_EVERY_STEPS = 100
 
 
 def _predict_masked_action(
@@ -139,6 +152,7 @@ def train(
     checkpoint_name: str = DEFAULT_CHECKPOINT_NAME,
     device: str = "cpu",
     verbose: int = 1,
+    show_progress: bool = False,
 ) -> Path:
     """Train a Connect Four ``MaskablePPO`` agent via self-play; returns the saved
     checkpoint path (``<checkpoint_dir>/<checkpoint_name>.zip``).
@@ -175,19 +189,106 @@ def train(
 
     env = make_env()
 
+    class RichTrainingProgressCallback(BaseCallback):  # type: ignore[misc]
+        """Rich progress display for long-running SB3 training."""
+
+        def __init__(self, total_timesteps: int, console: Console | None = None) -> None:
+            super().__init__(verbose=0)
+            self._total_timesteps = total_timesteps
+            self._console = console or Console()
+            self._progress: Progress | None = None
+            self._task_id: TaskID | None = None
+            self._started_at = 0.0
+            self._last_completed = 0
+
+        def _on_training_start(self) -> None:
+            self._started_at = time.perf_counter()
+            progress = Progress(
+                TextColumn("[bold cyan]{task.description}"),
+                BarColumn(),
+                TaskProgressColumn(),
+                MofNCompleteColumn(),
+                TimeElapsedColumn(),
+                TimeRemainingColumn(),
+                TextColumn(
+                    "fps={task.fields[fps]} "
+                    "refreshes={task.fields[refreshes]} "
+                    "next={task.fields[next_refresh]}"
+                ),
+                console=self._console,
+            )
+            self._progress = progress
+            self._task_id = progress.add_task(
+                "Training self-play",
+                total=self._total_timesteps,
+                fps="-",
+                refreshes=0,
+                next_refresh=f"{refresh_every:,}",
+            )
+            progress.start()
+
+        def _on_step(self) -> bool:
+            completed = min(self.num_timesteps, self._total_timesteps)
+            if (
+                completed == self._total_timesteps
+                or completed - self._last_completed >= PROGRESS_UPDATE_EVERY_STEPS
+            ):
+                self.update(completed=completed)
+            return True
+
+        def update(self, *, completed: int, refreshes: int = 0) -> None:
+            if self._progress is None or self._task_id is None:
+                return
+            elapsed = max(time.perf_counter() - self._started_at, 0.001)
+            fps = completed / elapsed
+            next_refresh_at = ((completed // refresh_every) + 1) * refresh_every
+            if completed >= self._total_timesteps:
+                next_refresh = "done"
+            else:
+                next_refresh = f"{min(next_refresh_at, self._total_timesteps):,}"
+            self._progress.update(
+                self._task_id,
+                completed=completed,
+                fps=f"{fps:.0f}",
+                refreshes=refreshes,
+                next_refresh=next_refresh,
+            )
+            self._last_completed = completed
+
+        def _on_training_end(self) -> None:
+            self.update(completed=min(self.num_timesteps, self._total_timesteps))
+            if self._progress is not None:
+                self._progress.stop()
+            self._progress = None
+            self._task_id = None
+
     class SelfPlaySnapshotCallback(BaseCallback):  # type: ignore[misc]
         """See this module's docstring ("Self-play snapshot mechanism")."""
 
-        def __init__(self, refresh_every: int, snapshot_path: Path, verbose: int = 0) -> None:
+        def __init__(
+            self,
+            refresh_every: int,
+            snapshot_path: Path,
+            progress_callback: RichTrainingProgressCallback | None = None,
+            verbose: int = 0,
+        ) -> None:
             super().__init__(verbose)
             self._refresh_every = refresh_every
             self._snapshot_path = snapshot_path
             self._last_refresh = 0
+            self._refresh_count = 0
+            self._progress_callback = progress_callback
 
         def _on_step(self) -> bool:
             if self.num_timesteps - self._last_refresh >= self._refresh_every:
                 self._refresh_opponent()
                 self._last_refresh = self.num_timesteps
+                self._refresh_count += 1
+                if self._progress_callback is not None:
+                    self._progress_callback.update(
+                        completed=min(self.num_timesteps, total_timesteps),
+                        refreshes=self._refresh_count,
+                    )
             return True
 
         def _refresh_opponent(self) -> None:
@@ -195,8 +296,19 @@ def train(
             opponent = MaskablePPOSnapshotOpponent.load(self._snapshot_path, device="cpu")
             self.training_env.env_method("set_opponent", opponent)
 
-    model = MaskablePPO("MlpPolicy", env, seed=seed, device=device, verbose=verbose)
-    callback = SelfPlaySnapshotCallback(refresh_every=refresh_every, snapshot_path=snapshot_path)
+    model_verbose = 0 if show_progress else verbose
+    model = MaskablePPO("MlpPolicy", env, seed=seed, device=device, verbose=model_verbose)
+    progress_callback = RichTrainingProgressCallback(total_timesteps) if show_progress else None
+    snapshot_callback = SelfPlaySnapshotCallback(
+        refresh_every=refresh_every,
+        snapshot_path=snapshot_path,
+        progress_callback=progress_callback,
+    )
+    callback: BaseCallback | list[BaseCallback]
+    if progress_callback is None:
+        callback = snapshot_callback
+    else:
+        callback = [snapshot_callback, progress_callback]
     model.learn(total_timesteps=total_timesteps, callback=callback)
 
     checkpoint_path = checkpoint_dir / f"{checkpoint_name}.zip"
@@ -211,9 +323,7 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
             "'rl' extras (`make install-rl`); not expected to run in the dev sandbox."
         )
     )
-    parser.add_argument(
-        "--timesteps", type=int, default=100_000, help="Total training timesteps."
-    )
+    parser.add_argument("--timesteps", type=int, default=100_000, help="Total training timesteps.")
     parser.add_argument("--seed", type=int, default=0, help="Random seed (env + model).")
     parser.add_argument(
         "--refresh-every",
@@ -228,6 +338,17 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         "--checkpoint-name", type=str, default=DEFAULT_CHECKPOINT_NAME, help="Checkpoint file stem."
     )
     parser.add_argument("--device", type=str, default="cpu", help="'cpu', 'cuda', or 'auto'.")
+    parser.add_argument(
+        "--no-progress",
+        action="store_true",
+        help="Disable the progress bar and live training stats.",
+    )
+    parser.add_argument(
+        "--verbose",
+        type=int,
+        default=1,
+        help="Stable-Baselines verbosity when progress is disabled.",
+    )
     return parser.parse_args(argv)
 
 
@@ -240,6 +361,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         checkpoint_dir=args.checkpoint_dir,
         checkpoint_name=args.checkpoint_name,
         device=args.device,
+        verbose=args.verbose,
+        show_progress=not args.no_progress,
     )
     print(f"Saved checkpoint to {checkpoint_path}")
 

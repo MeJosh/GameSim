@@ -10,13 +10,23 @@ from __future__ import annotations
 import argparse
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Protocol
 
 import numpy as np
+from rich.console import Console
+from rich.progress import (
+    BarColumn,
+    MofNCompleteColumn,
+    Progress,
+    TaskID,
+    TaskProgressColumn,
+    TextColumn,
+    TimeElapsedColumn,
+    TimeRemainingColumn,
+)
 
 from gamesim.agents.scripted import MinimaxAgent
-from gamesim.core.agent import Agent
-from gamesim.core.agent import RandomAgent
+from gamesim.core.agent import Agent, RandomAgent
 from gamesim.core.engine import Engine
 from gamesim.core.runner import run_game
 from gamesim.core.types import ActionT, AgentId, Observation
@@ -45,6 +55,74 @@ class EvaluationResult:
         return self.wins_b / self.games if self.games else 0.0
 
 
+class EvaluationProgress(Protocol):
+    """Receives per-game evaluation progress updates."""
+
+    def start(self, total_games: int) -> None:
+        """Start rendering progress for an evaluation run."""
+
+    def update(self, completed_games: int, result: EvaluationResult) -> None:
+        """Render an updated aggregate result after one or more games."""
+
+    def stop(self) -> None:
+        """Finish rendering progress for an evaluation run."""
+
+
+class RichEvaluationProgress:
+    """Rich-powered progress display for evaluation CLI runs."""
+
+    def __init__(self, *, console: Console | None = None, label: str = "Evaluating") -> None:
+        self._console = console or Console()
+        self._label = label
+        self._progress: Progress | None = None
+        self._task_id: TaskID | None = None
+
+    def start(self, total_games: int) -> None:
+        progress = Progress(
+            TextColumn("[bold cyan]{task.description}"),
+            BarColumn(),
+            TaskProgressColumn(),
+            MofNCompleteColumn(),
+            TimeElapsedColumn(),
+            TimeRemainingColumn(),
+            TextColumn(
+                "wins={task.fields[wins_a]} "
+                "losses={task.fields[wins_b]} "
+                "draws={task.fields[draws]} "
+                "win={task.fields[win_rate]}"
+            ),
+            console=self._console,
+        )
+        self._progress = progress
+        self._task_id = progress.add_task(
+            self._label,
+            total=total_games,
+            wins_a=0,
+            wins_b=0,
+            draws=0,
+            win_rate="0.0%",
+        )
+        progress.start()
+
+    def update(self, completed_games: int, result: EvaluationResult) -> None:
+        if self._progress is None or self._task_id is None:
+            return
+        self._progress.update(
+            self._task_id,
+            completed=completed_games,
+            wins_a=result.wins_a,
+            wins_b=result.wins_b,
+            draws=result.draws,
+            win_rate=f"{result.win_rate_a * 100:.1f}%",
+        )
+
+    def stop(self) -> None:
+        if self._progress is not None:
+            self._progress.stop()
+        self._progress = None
+        self._task_id = None
+
+
 def evaluate(
     engine: Engine[Observation, ActionT],
     agent_a: Agent[Observation, ActionT],
@@ -52,6 +130,7 @@ def evaluate(
     *,
     num_games: int,
     seed: int | None = None,
+    progress: EvaluationProgress | None = None,
 ) -> EvaluationResult:
     """Play ``num_games`` between ``agent_a`` and ``agent_b`` via ``run_game``.
 
@@ -66,25 +145,41 @@ def evaluate(
     wins_b = 0
     draws = 0
 
-    for game_index in range(num_games):
-        game_seed = int(rng.integers(0, 2**31 - 1))
-        a_moves_first = game_index % 2 == 0
-        if a_moves_first:
-            seat_a, seat_b = AgentId(0), AgentId(1)
-        else:
-            seat_a, seat_b = AgentId(1), AgentId(0)
+    if progress is not None:
+        progress.start(num_games)
 
-        agents = {seat_a: agent_a, seat_b: agent_b}
-        rewards = run_game(engine, agents, seed=game_seed)
+    try:
+        for game_index in range(num_games):
+            game_seed = int(rng.integers(0, 2**31 - 1))
+            a_moves_first = game_index % 2 == 0
+            if a_moves_first:
+                seat_a, seat_b = AgentId(0), AgentId(1)
+            else:
+                seat_a, seat_b = AgentId(1), AgentId(0)
 
-        reward_a = rewards[seat_a]
-        reward_b = rewards[seat_b]
-        if reward_a > reward_b:
-            wins_a += 1
-        elif reward_b > reward_a:
-            wins_b += 1
-        else:
-            draws += 1
+            agents = {seat_a: agent_a, seat_b: agent_b}
+            rewards = run_game(engine, agents, seed=game_seed)
+
+            reward_a = rewards[seat_a]
+            reward_b = rewards[seat_b]
+            if reward_a > reward_b:
+                wins_a += 1
+            elif reward_b > reward_a:
+                wins_b += 1
+            else:
+                draws += 1
+
+            if progress is not None:
+                partial_result = EvaluationResult(
+                    games=game_index + 1,
+                    wins_a=wins_a,
+                    wins_b=wins_b,
+                    draws=draws,
+                )
+                progress.update(game_index + 1, partial_result)
+    finally:
+        if progress is not None:
+            progress.stop()
 
     return EvaluationResult(games=num_games, wins_a=wins_a, wins_b=wins_b, draws=draws)
 
@@ -143,6 +238,11 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Search depth for the minimax baseline.",
     )
     parser.add_argument("--device", type=str, default="cpu", help="'cpu', 'cuda', or 'auto'.")
+    parser.add_argument(
+        "--no-progress",
+        action="store_true",
+        help="Disable the progress bar and live evaluation stats.",
+    )
     return parser.parse_args(argv)
 
 
@@ -176,6 +276,9 @@ def main(argv: list[str] | None = None) -> None:
             opponent,
             num_games=args.games,
             seed=args.seed + index,
+            progress=None
+            if args.no_progress
+            else RichEvaluationProgress(label=f"Evaluating vs {opponent_name}"),
         )
         print(_format_result(opponent_name, result))
 

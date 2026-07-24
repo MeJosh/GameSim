@@ -91,12 +91,8 @@ class GameSimAECEnv(AECEnv, Generic[Observation, ActionT]):  # type: ignore[misc
         self.observation_spaces: dict[str, spaces.Space[Any]] = {
             name: spaces.Dict(
                 {
-                    "observation": spaces.Box(
-                        low=0.0, high=1.0, shape=obs_shape, dtype=np.float32
-                    ),
-                    "action_mask": spaces.Box(
-                        low=0, high=1, shape=(num_actions,), dtype=np.int8
-                    ),
+                    "observation": spaces.Box(low=0.0, high=1.0, shape=obs_shape, dtype=np.float32),
+                    "action_mask": spaces.Box(low=0, high=1, shape=(num_actions,), dtype=np.int8),
                 }
             )
             for name in self.possible_agents
