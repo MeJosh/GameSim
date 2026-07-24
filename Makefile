@@ -135,6 +135,19 @@ REPORT_OUT ?= reports/connect_four_match.html
 report: ## Write a standalone, self-contained HTML match report from a recorded log
 	$(VENV_PY) -m gamesim.viz.report --log $(REPORT_LOG) --output $(REPORT_OUT)
 
+RUN_DIR ?= runs/incremental-smoke-001
+
+.PHONY: incremental-smoke
+incremental-smoke: ## Run the bounded incremental-training smoke experiment (needs install-rl)
+	$(VENV_PY) scripts/run_incremental_smoke.py --run-dir $(RUN_DIR)
+
+PROGRESS_JSON ?= $(RUN_DIR)/progress.json
+PROGRESS_REPORT_OUT ?= reports/incremental_progress.html
+
+.PHONY: progress-report
+progress-report: ## Write a standalone HTML training-progress report from a run's progress.json (torch-free)
+	$(VENV_PY) -m gamesim.viz.progress_report --progress $(PROGRESS_JSON) --output $(PROGRESS_REPORT_OUT)
+
 ## ---------------------------------------------------------------------------
 ## Housekeeping
 ## ---------------------------------------------------------------------------

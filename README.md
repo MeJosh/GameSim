@@ -94,22 +94,32 @@ make install-web
 make serve
 ```
 
-Then open `http://127.0.0.1:8000`. Select **Trained policy** to use the default
-checkpoint at `checkpoints/connect_four_maskable_ppo.zip`; use the random opponent
-without the RL dependencies installed. The service is local and in-memory, so active
-games are not persisted when the server stops.
+Then open `http://127.0.0.1:8000`. Pick an opponent: **Random** or **Minimax** need no
+RL dependencies; **Trained policy** uses the default checkpoint at
+`checkpoints/connect_four_maskable_ppo.zip` (requires the RL extras). The service is
+local and in-memory, so active games are not persisted when the server stops.
 
-Record a reproducible trained-versus-random match for the **Replay** tab with:
+### Record a match and view it
+
+`record-matches` plays any two agents and writes a versioned ZIP match archive
+(`manifest.json` index + one replayable JSON per game). Each side is `random`,
+`minimax[:depth]`, or `trained:<checkpoint>` — so `minimax`-vs-`random` records with no
+RL dependency at all, while trained matchups need the RL extras:
 
 ```bash
-make record-matches GAMES=100
+make record-matches GAMES=100                        # trained vs random (default)
+make record-matches AGENT_A=minimax:4 AGENT_B=random # no torch needed
 ```
 
-This writes `logs/connect_four_trained_vs_random.zip`. The archive contains a
-`manifest.json` index plus one replayable JSON file per game under `games/`. Open the
-Replay tab, choose that file, select a game from the left list, then use the arrow
-buttons or left/right arrow keys to inspect each engine-reconstructed turn. Recording
-requires the RL and web extras: `pip install -e ".[dev,rl,web]"`.
+Turn any match archive into a **single self-contained HTML report** (summary stats +
+click-through of every game, no server, no dependencies to open):
+
+```bash
+make report REPORT_LOG=logs/connect_four_trained_vs_random.zip REPORT_OUT=reports/match.html
+```
+
+Or explore it in the browser: open the **Replay** tab, upload the archive, pick a game,
+and step through each engine-reconstructed turn (the panel also shows a summary).
 
 ### Incremental training smoke run
 
@@ -121,10 +131,19 @@ python scripts/run_incremental_smoke.py --run-dir runs/incremental-smoke-001
 ```
 
 It evaluates an untrained baseline, then continues one PPO model through 2,048,
-4,096, and 8,192 additional timesteps. Each of the four stages saves a checkpoint
-and a 1,000-game trained-versus-random replay ZIP under the supplied run directory.
-`progress.json` indexes the stage results for a later progress visualization. The
-script refuses to reuse an existing directory, so it cannot overwrite prior runs.
+4,096, and 8,192 additional timesteps. Each stage saves a checkpoint, evaluates the
+policy against **random and minimax** baselines, records a representative match log per
+stage under `matches/`, and plays **head-to-head vs earlier checkpoints**. A versioned
+`progress.json` captures the metrics (win-rate, game length, opening-move distribution,
+head-to-head). The script refuses to reuse an existing directory, so it cannot overwrite
+prior runs.
+
+Turn a completed run into a **self-contained HTML progress report** (win-rate and
+game-length trends, opening-strategy shift, and a head-to-head matrix — torch-free):
+
+```bash
+make progress-report PROGRESS_JSON=runs/incremental-smoke-001/progress.json PROGRESS_REPORT_OUT=reports/progress.html
+```
 
 After training, evaluate the saved policy against random and minimax baselines:
 

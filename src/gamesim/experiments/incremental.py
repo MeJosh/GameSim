@@ -1,38 +1,49 @@
-"""Bounded incremental-training experiment support.
+"""Bounded incremental-training experiment support (TORCH-DEPENDENT driver).
 
 The experiment keeps one live PPO model across short learning segments. It is kept
 outside the normal training CLI while the workflow is still exploratory.
+
+Per checkpoint ("stage"), this now records a richer evaluation via the torch-free
+``gamesim.experiments.progress`` layer (see docs/adr/0009-offline-analysis-and-
+reporting.md and plans/phase-03-visualization.md Slice 3d): winrate/game-length/
+opening-move stats vs both a random and a minimax baseline (``evaluate_stage``), plus
+a head-to-head record against every earlier stage (``head_to_head``). ``evaluate_stage``
+also returns the two recorded ``MatchLog``s behind those stats; this driver writes them
+to ``<run_dir>/matches/`` via ``write_match_log`` and records their relative paths on
+each stage's ``match_log_paths``, so a checkpoint's actual games -- not just aggregate
+stats -- stay openable later (e.g. via ``gamesim.viz.report``). The resulting
+``ProgressLog`` is persisted as the versioned ``progress.json`` (``PROGRESS_FORMAT``)
+via ``write_progress_log``.
+
+All sb3/torch imports stay local to ``run_smoke_experiment``, so importing this
+module -- and everything it wires together from ``gamesim.experiments.progress`` --
+never requires torch to be installed. Only *calling* ``run_smoke_experiment`` does.
 """
 
 from __future__ import annotations
 
-import json
-from dataclasses import asdict, dataclass
+from dataclasses import replace
 from pathlib import Path
-from typing import Any
 
-from gamesim.core.agent import RandomAgent
+from gamesim.agents.scripted import MinimaxAgent
+from gamesim.core.agent import Agent, RandomAgent
+from gamesim.experiments.progress import (
+    HeadToHeadEntry,
+    ProgressLog,
+    StageMetrics,
+    evaluate_stage,
+    head_to_head,
+    write_progress_log,
+)
 from gamesim.games.connect_four import ConnectFourEncoder, ConnectFourEngine
 from gamesim.games.connect_four.engine import ConnectFourObservation
 from gamesim.games.connect_four.state import NUM_COLUMNS
-from gamesim.recording import record_match, write_match_log
+from gamesim.recording.match_log import write_match_log
 
 SMOKE_TRAINING_SEGMENTS: tuple[int, ...] = (2_048, 4_096, 8_192)
 DEFAULT_EVALUATION_GAMES = 1_000
-
-
-@dataclass(frozen=True)
-class StageResult:
-    """One baseline or trained checkpoint evaluation in an incremental run."""
-
-    label: str
-    cumulative_timesteps: int
-    segment_timesteps: int
-    checkpoint: str
-    match_log: str
-    wins: int
-    losses: int
-    draws: int
+DEFAULT_HEAD_TO_HEAD_GAMES = 200
+DEFAULT_MINIMAX_DEPTH = 4
 
 
 def prepare_run_directory(run_dir: str | Path) -> Path:
@@ -44,31 +55,22 @@ def prepare_run_directory(run_dir: str | Path) -> Path:
     return output_dir
 
 
-def write_progress(run_dir: str | Path, stages: list[StageResult]) -> Path:
-    """Atomically update the small progress index consumed by later visualizations."""
-    output_path = Path(run_dir) / "progress.json"
-    temporary_path = output_path.with_suffix(".tmp")
-    payload: dict[str, Any] = {
-        "format": "gamesim.incremental-training/v1",
-        "stages": [asdict(stage) for stage in stages],
-    }
-    temporary_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-    temporary_path.replace(output_path)
-    return output_path
-
-
 def run_smoke_experiment(
     *,
     run_dir: str | Path,
     seed: int = 0,
     evaluation_games: int = DEFAULT_EVALUATION_GAMES,
+    head_to_head_games: int = DEFAULT_HEAD_TO_HEAD_GAMES,
     random_seed: int = 123,
+    minimax_depth: int = DEFAULT_MINIMAX_DEPTH,
     device: str = "cpu",
-) -> list[StageResult]:
+) -> ProgressLog:
     """Run a baseline plus three short, cumulative PPO training segments.
 
     Requires the ``rl`` extra. All model imports stay local so planning and tests
-    remain usable without torch or sb3-contrib installed.
+    remain usable without torch or sb3-contrib installed. Returns the full
+    :class:`~gamesim.experiments.progress.ProgressLog` for the run (also persisted
+    as ``<run_dir>/progress.json`` after every stage).
     """
     if evaluation_games < 1:
         raise ValueError("evaluation_games must be at least 1")
@@ -77,7 +79,7 @@ def run_smoke_experiment(
     from sb3_contrib.common.wrappers import ActionMasker
 
     from gamesim.rl.selfplay_env import SelfPlayEnv
-    from gamesim.rl.train import MaskablePPOSnapshotOpponent
+    from gamesim.rl.train import MaskablePolicyAgent, MaskablePPOSnapshotOpponent
 
     output_dir = prepare_run_directory(run_dir)
     encoder = ConnectFourEncoder()
@@ -89,84 +91,73 @@ def run_smoke_experiment(
     )
     env = ActionMasker(base_env, lambda current_env: current_env.action_masks())
     model = MaskablePPO("MlpPolicy", env, seed=seed, device=device, verbose=0)
-    stages: list[StageResult] = []
 
-    _record_stage(
-        model=model,
-        encoder=encoder,
-        output_dir=output_dir,
-        stages=stages,
-        label="baseline",
-        cumulative_timesteps=0,
-        segment_timesteps=0,
-        evaluation_games=evaluation_games,
-        evaluation_seed=seed,
-        random_seed=random_seed,
-    )
+    stages: list[StageMetrics] = []
+    head_to_head_entries: list[HeadToHeadEntry] = []
+    earlier_agents: list[tuple[str, Agent[ConnectFourObservation, int]]] = []
+
+    def record_stage(label: str, cumulative_timesteps: int) -> StageMetrics:
+        """Checkpoint the live model, evaluate it, and persist the updated progress log.
+
+        Also writes the representative recorded ``MatchLog`` for each baseline
+        evaluation (vs random, vs minimax) to ``<run_dir>/matches/`` so the checkpoint's
+        actual games -- not just aggregate stats -- can later be opened in the
+        standalone HTML match report (``gamesim.viz.report``); their run-dir-relative
+        paths are recorded on the persisted ``StageMetrics.match_log_paths``.
+        """
+        checkpoint_path = output_dir / "checkpoints" / f"{label}.zip"
+        model.save(checkpoint_path)
+        agent: MaskablePolicyAgent[ConnectFourObservation] = MaskablePolicyAgent(model, encoder)
+
+        stage, match_logs = evaluate_stage(
+            agent,
+            label=label,
+            cumulative_timesteps=cumulative_timesteps,
+            random_agent=RandomAgent[ConnectFourObservation](seed=random_seed),
+            minimax_agent=MinimaxAgent(depth=minimax_depth),
+            num_games=evaluation_games,
+            seed=seed,
+        )
+        match_log_paths: dict[str, str] = {}
+        for opponent_key, match_log in match_logs.items():
+            relative_path = Path("matches") / f"{label}-vs-{opponent_key}.zip"
+            write_match_log(output_dir / relative_path, match_log)
+            match_log_paths[opponent_key] = relative_path.as_posix()
+        stage = replace(stage, match_log_paths=match_log_paths)
+        stages.append(stage)
+
+        for earlier_label, earlier_agent in earlier_agents:
+            head_to_head_entries.extend(
+                head_to_head(
+                    [(label, agent), (earlier_label, earlier_agent)],
+                    num_games=head_to_head_games,
+                    seed=seed,
+                )
+            )
+        earlier_agents.append((label, agent))
+
+        write_progress_log(
+            output_dir / "progress.json",
+            ProgressLog(stages=tuple(stages), head_to_head=tuple(head_to_head_entries)),
+        )
+        print(
+            f"{label}: vs random {stage.vs_random.win_rate:.1%} "
+            f"({stage.vs_random.wins}-{stage.vs_random.losses}-{stage.vs_random.draws}), "
+            f"vs minimax {stage.vs_minimax.win_rate:.1%} "
+            f"({stage.vs_minimax.wins}-{stage.vs_minimax.losses}-{stage.vs_minimax.draws}) "
+            f"over {evaluation_games:,} games each"
+        )
+        return stage
+
+    record_stage("baseline", 0)
 
     cumulative_timesteps = 0
     for segment_timesteps in SMOKE_TRAINING_SEGMENTS:
         print(f"Training next {segment_timesteps:,} timesteps...")
         model.learn(total_timesteps=segment_timesteps, reset_num_timesteps=False)
         cumulative_timesteps += segment_timesteps
-        stage = _record_stage(
-            model=model,
-            encoder=encoder,
-            output_dir=output_dir,
-            stages=stages,
-            label=f"step-{cumulative_timesteps:07d}",
-            cumulative_timesteps=cumulative_timesteps,
-            segment_timesteps=segment_timesteps,
-            evaluation_games=evaluation_games,
-            evaluation_seed=seed,
-            random_seed=random_seed,
-        )
-        base_env.set_opponent(MaskablePPOSnapshotOpponent.load(output_dir / stage.checkpoint))
+        record_stage(f"step-{cumulative_timesteps:07d}", cumulative_timesteps)
+        checkpoint_path = output_dir / "checkpoints" / f"step-{cumulative_timesteps:07d}.zip"
+        base_env.set_opponent(MaskablePPOSnapshotOpponent.load(checkpoint_path))
 
-    return stages
-
-
-def _record_stage(
-    *,
-    model: Any,
-    encoder: ConnectFourEncoder,
-    output_dir: Path,
-    stages: list[StageResult],
-    label: str,
-    cumulative_timesteps: int,
-    segment_timesteps: int,
-    evaluation_games: int,
-    evaluation_seed: int,
-    random_seed: int,
-) -> StageResult:
-    """Checkpoint the live model, evaluate it, and persist one durable stage record."""
-    from gamesim.rl.train import MaskablePolicyAgent
-
-    checkpoint = Path("checkpoints") / f"{label}.zip"
-    match_log = Path("matches") / f"{label}-vs-random.zip"
-    checkpoint_path = output_dir / checkpoint
-    model.save(checkpoint_path)
-    policy_agent: MaskablePolicyAgent[ConnectFourObservation] = MaskablePolicyAgent(model, encoder)
-    recorded_match = record_match(
-        policy_agent,
-        RandomAgent[ConnectFourObservation](seed=random_seed),
-        agent_a_name="trained",
-        agent_b_name="random",
-        num_games=evaluation_games,
-        seed=evaluation_seed,
-    )
-    write_match_log(output_dir / match_log, recorded_match)
-    stage = StageResult(
-        label=label,
-        cumulative_timesteps=cumulative_timesteps,
-        segment_timesteps=segment_timesteps,
-        checkpoint=str(checkpoint),
-        match_log=str(match_log),
-        wins=sum(game.outcome == "agent_a" for game in recorded_match.games),
-        losses=sum(game.outcome == "agent_b" for game in recorded_match.games),
-        draws=sum(game.outcome == "draw" for game in recorded_match.games),
-    )
-    stages.append(stage)
-    write_progress(output_dir, stages)
-    print(f"{label}: {stage.wins}-{stage.losses}-{stage.draws} over {evaluation_games:,} games")
-    return stage
+    return ProgressLog(stages=tuple(stages), head_to_head=tuple(head_to_head_entries))

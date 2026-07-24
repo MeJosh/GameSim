@@ -36,7 +36,7 @@ tested here; the actual training loop is code-complete and runs on the user's ma
 blocked). **Remaining to fully close Phase 2's exit criteria:** run training locally and
 confirm the trained agent beats random ≫50% / is competitive vs. minimax.
 
-## Phase 3 — Visualization, interaction & progress measurement  ◐
+## Phase 3 — Visualization, interaction & progress measurement  ☑ (torch-free layers done; model runs local)
 Interact with a trained model (play vs random/minimax/trained), log a sample of games
 (e.g. model-v-model), step through them + see a summary (portable standalone HTML report
 + the browser explorer), and measure training progress across incremental checkpoints
@@ -47,6 +47,12 @@ interaction loop, and progress measurement.
 **Exit:** play a game vs an opponent; record a match, open a self-contained HTML report
 and step through it with a summary; (stretch) a progress report across checkpoints.
 Analysis/report layers are torch-free and tested in-sandbox; model-backed runs are local.
+**Done 2026-07-23:** all three deliverables (play, model-v-model logging + HTML report +
+summary + explorer, incremental progress report) complete. 146 tests green + 1 skipped;
+ruff + format + mypy --strict clean; built via orchestrated sub agents (implement → review
+→ fix per slice). **Remaining (local, needs torch):** run a training-backed session to
+exercise the trained web opponent, `record-matches` with a checkpoint, and the incremental
+progress run end to end.
 
 ## Phase 4 — Prove game-agnosticism + optional ECS  ☐
 Add a second simple game (candidate: Nim or Tic-Tac-Toe) reusing core/agents/logging/DRL

@@ -202,3 +202,33 @@ already-reviewed 3a helpers; the novel work got a full review in 3a/3b/3d.)
 - `game_service.replay_at` now delegates board reconstruction to `replay_match_game`
   (the 3a-deferred reuse); `current_player = seats[move % 2]` (Connect Four never skips a
   turn). `_validate_game` keeps its own engine replay (needs `rewards()`).
+
+## As-built notes — Slice 3d (2026-07-23, stretch) ✅
+Implemented, independently reviewed (approve-with-nits, no blocking bugs — reviewer
+verified head-to-head complementarity + first-mover attribution), nits fixed.
+**146 tests pass + 1 skipped**; ruff + format + mypy --strict clean; torch-free confirmed.
+- `experiments/progress.py` (torch-free) — versioned schema `gamesim.incremental-training/v2`:
+  `ProgressLog` → `StageMetrics` (`label`, `cumulative_timesteps`, `vs_random`/`vs_minimax`
+  `BaselineMetrics`, and `match_log_paths`) + `HeadToHeadEntry`. Torch-free helpers
+  `evaluate_stage(agent, ...)` (records vs random+minimax, derives metrics via
+  `summarize_match`, returns the recorded `MatchLog`s too) and `head_to_head(labeled_agents)`
+  (complementary entries from one match per pair). `write/read_progress_log` validated +
+  round-trippable.
+- `viz/progress_report.py` (torch-free) — self-contained HTML: win-rate trend vs
+  random/minimax over timesteps, game-length trend, opening-distribution shift, head-to-head
+  matrix, and per-stage links to the saved match logs (openable in the 3b report).
+- `experiments/incremental.py` — the torch training driver now populates the v2 schema and
+  **writes a representative match log per stage** into `<run_dir>/matches/` (torch-isolated;
+  runs locally). This realizes the "log game simulations at each snapshot" goal.
+- Fixes from review: malformed schema input now raises a clear `ValueError` (not
+  `IndexError`); the previously-unused `matches/` dir is now populated + linked.
+
+---
+
+## Phase 3 status: ✅ COMPLETE (torch-free layers verified in-sandbox; model-backed runs local)
+All three deliverables done: (1) interactive play vs random/minimax/trained; (2) record a
+match, open a self-contained HTML report + step through it with a summary (and the browser
+explorer); (3) incremental progress measurement (winrate vs random+minimax, game length,
+opening strategy, head-to-head) with a progress report. **146 tests pass + 1 skipped**
+(the torch training smoke test), ruff + format + mypy --strict clean, everything torch-free
+except the isolated training/model-loading paths, which run locally via `make`.
