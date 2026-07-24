@@ -7,8 +7,8 @@ Usage (after installing the ``rl`` extra):
 from __future__ import annotations
 
 import argparse
-from pathlib import Path
 import sys
+from pathlib import Path
 
 
 def _source_directory() -> Path:

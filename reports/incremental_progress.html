@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>GameSim training progress report</title>
+<style>
+:root { color-scheme: light; }
+body { font-family: system-ui, sans-serif; margin: 2rem; color: #1a1a1a; }
+h1 { margin-bottom: 0.25rem; }
+section { margin-bottom: 2rem; }
+table { border-collapse: collapse; }
+th, td { border: 1px solid #ccc; padding: 0.3rem 0.6rem; text-align: right; font-size: 0.85rem; }
+th:first-child, td:first-child { text-align: left; }
+td.diagonal, td.empty { color: #999; text-align: center; }
+.bars { display: flex; flex-direction: column; gap: 0.25rem; margin: 0.25rem 0 0.75rem; }
+.bar-row { display: grid; grid-template-columns: 6rem 1fr 3rem; align-items: center; gap: 0.5rem; }
+.bar-label { font-size: 0.8rem; color: #444; }
+.bar-track { background: #e5e5e5; border-radius: 3px; height: 0.6rem; overflow: hidden; }
+.bar-fill { background: #3366cc; height: 100%; }
+.bar-count { font-size: 0.75rem; text-align: right; color: #444; }
+.empty { color: #777; font-style: italic; }
+.chart { width: 100%; max-width: 560px; border: 1px solid #ddd; background: #fafafa; }
+.legend { display: flex; gap: 1rem; font-size: 0.8rem; margin-bottom: 0.25rem; }
+.legend-item { display: inline-flex; align-items: center; gap: 0.25rem; }
+.swatch { width: 0.7rem; height: 0.7rem; border-radius: 50%; display: inline-block; }
+</style>
+</head>
+<body>
+<h1>GameSim training progress report</h1>
+<section id="stages">
+  <h2>Stages</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Stage</th><th>Cumulative timesteps</th>
+        <th>Win rate vs random (W-L-D)</th><th>Win rate vs minimax (W-L-D)</th>
+        <th>Game length vs random</th><th>Game length vs minimax</th>
+        <th>Match logs</th>
+      </tr>
+    </thead>
+    <tbody>
+<tr><td>baseline</td><td>0</td><td>78.0% (78-22-0)</td><td>0.0% (0-100-0)</td><td>12.30</td><td>10.50</td><td><a href="matches/baseline-vs-random.zip">random</a>, <a href="matches/baseline-vs-minimax.zip">minimax</a></td></tr>
+<tr><td>step-0004096</td><td>4,096</td><td>75.0% (75-25-0)</td><td>0.0% (0-100-0)</td><td>16.17</td><td>18.50</td><td><a href="matches/step-0004096-vs-random.zip">random</a>, <a href="matches/step-0004096-vs-minimax.zip">minimax</a></td></tr>
+<tr><td>step-0012288</td><td>12,288</td><td>80.0% (80-20-0)</td><td>0.0% (0-100-0)</td><td>16.14</td><td>24.50</td><td><a href="matches/step-0012288-vs-random.zip">random</a>, <a href="matches/step-0012288-vs-minimax.zip">minimax</a></td></tr>
+<tr><td>step-0028672</td><td>28,672</td><td>76.0% (76-24-0)</td><td>0.0% (0-100-0)</td><td>16.30</td><td>13.50</td><td><a href="matches/step-0028672-vs-random.zip">random</a>, <a href="matches/step-0028672-vs-minimax.zip">minimax</a></td></tr>
+<tr><td>step-0061440</td><td>61,440</td><td>82.0% (82-18-0)</td><td>0.0% (0-100-0)</td><td>14.36</td><td>11.50</td><td><a href="matches/step-0061440-vs-random.zip">random</a>, <a href="matches/step-0061440-vs-minimax.zip">minimax</a></td></tr>
+<tr><td>step-0126976</td><td>126,976</td><td>77.0% (77-23-0)</td><td>0.0% (0-100-0)</td><td>16.71</td><td>13.50</td><td><a href="matches/step-0126976-vs-random.zip">random</a>, <a href="matches/step-0126976-vs-minimax.zip">minimax</a></td></tr>
+    </tbody>
+  </table>
+</section>
+<section id="winrate">
+<h3>Win rate vs baselines over cumulative timesteps</h3>
+<div class="legend"><span class="legend-item"><span class="swatch" style="background:#3366cc"></span>vs random</span><span class="legend-item"><span class="swatch" style="background:#d9483f"></span>vs minimax</span></div>
+<svg viewBox="0 0 560 180" class="chart" role="img" aria-label="Win rate vs baselines over cumulative timesteps"><polyline points="28.0,55.3 44.3,59.0 76.8,52.8 141.8,57.8 271.9,50.3 532.0,56.5" fill="none" stroke="#3366cc" stroke-width="2" /><circle cx="28.0" cy="55.3" r="3" fill="#3366cc" /><circle cx="44.3" cy="59.0" r="3" fill="#3366cc" /><circle cx="76.8" cy="52.8" r="3" fill="#3366cc" /><circle cx="141.8" cy="57.8" r="3" fill="#3366cc" /><circle cx="271.9" cy="50.3" r="3" fill="#3366cc" /><circle cx="532.0" cy="56.5" r="3" fill="#3366cc" /><polyline points="28.0,152.0 44.3,152.0 76.8,152.0 141.8,152.0 271.9,152.0 532.0,152.0" fill="none" stroke="#d9483f" stroke-width="2" /><circle cx="28.0" cy="152.0" r="3" fill="#d9483f" /><circle cx="44.3" cy="152.0" r="3" fill="#d9483f" /><circle cx="76.8" cy="152.0" r="3" fill="#d9483f" /><circle cx="141.8" cy="152.0" r="3" fill="#d9483f" /><circle cx="271.9" cy="152.0" r="3" fill="#d9483f" /><circle cx="532.0" cy="152.0" r="3" fill="#d9483f" /></svg>
+</section>
+<section id="game-length">
+<h3>Mean game length over cumulative timesteps</h3>
+<div class="legend"><span class="legend-item"><span class="swatch" style="background:#3366cc"></span>vs random</span><span class="legend-item"><span class="swatch" style="background:#d9483f"></span>vs minimax</span></div>
+<svg viewBox="0 0 560 180" class="chart" role="img" aria-label="Mean game length over cumulative timesteps"><polyline points="28.0,89.7 44.3,70.2 76.8,70.3 141.8,69.5 271.9,79.3 532.0,67.4" fill="none" stroke="#3366cc" stroke-width="2" /><circle cx="28.0" cy="89.7" r="3" fill="#3366cc" /><circle cx="44.3" cy="70.2" r="3" fill="#3366cc" /><circle cx="76.8" cy="70.3" r="3" fill="#3366cc" /><circle cx="141.8" cy="69.5" r="3" fill="#3366cc" /><circle cx="271.9" cy="79.3" r="3" fill="#3366cc" /><circle cx="532.0" cy="67.4" r="3" fill="#3366cc" /><polyline points="28.0,98.9 44.3,58.4 76.8,28.0 141.8,83.7 271.9,93.8 532.0,83.7" fill="none" stroke="#d9483f" stroke-width="2" /><circle cx="28.0" cy="98.9" r="3" fill="#d9483f" /><circle cx="44.3" cy="58.4" r="3" fill="#d9483f" /><circle cx="76.8" cy="28.0" r="3" fill="#d9483f" /><circle cx="141.8" cy="83.7" r="3" fill="#d9483f" /><circle cx="271.9" cy="93.8" r="3" fill="#d9483f" /><circle cx="532.0" cy="83.7" r="3" fill="#d9483f" /></svg>
+</section>
+<section id="openings">
+<h2>Opening-move distribution by stage</h2>
+<h4>baseline &mdash; vs random</h4>
+<div class="bars">
+<div class="bar-row"><span class="bar-label">col 0</span><div class="bar-track"><div class="bar-fill" style="width:7.00%"></div></div><span class="bar-count">7</span></div>
+<div class="bar-row"><span class="bar-label">col 1</span><div class="bar-track"><div class="bar-fill" style="width:8.00%"></div></div><span class="bar-count">8</span></div>
+<div class="bar-row"><span class="bar-label">col 2</span><div class="bar-track"><div class="bar-fill" style="width:7.00%"></div></div><span class="bar-count">7</span></div>
+<div class="bar-row"><span class="bar-label">col 3</span><div class="bar-track"><div class="bar-fill" style="width:9.00%"></div></div><span class="bar-count">9</span></div>
+<div class="bar-row"><span class="bar-label">col 4</span><div class="bar-track"><div class="bar-fill" style="width:6.00%"></div></div><span class="bar-count">6</span></div>
+<div class="bar-row"><span class="bar-label">col 5</span><div class="bar-track"><div class="bar-fill" style="width:58.00%"></div></div><span class="bar-count">58</span></div>
+<div class="bar-row"><span class="bar-label">col 6</span><div class="bar-track"><div class="bar-fill" style="width:5.00%"></div></div><span class="bar-count">5</span></div>
+</div>
+<h4>baseline &mdash; vs minimax</h4>
+<div class="bars">
+<div class="bar-row"><span class="bar-label">col 3</span><div class="bar-track"><div class="bar-fill" style="width:50.00%"></div></div><span class="bar-count">50</span></div>
+<div class="bar-row"><span class="bar-label">col 5</span><div class="bar-track"><div class="bar-fill" style="width:50.00%"></div></div><span class="bar-count">50</span></div>
+</div>
+<h4>step-0004096 &mdash; vs random</h4>
+<div class="bars">
+<div class="bar-row"><span class="bar-label">col 0</span><div class="bar-track"><div class="bar-fill" style="width:8.00%"></div></div><span class="bar-count">8</span></div>
+<div class="bar-row"><span class="bar-label">col 1</span><div class="bar-track"><div class="bar-fill" style="width:5.00%"></div></div><span class="bar-count">5</span></div>
+<div class="bar-row"><span class="bar-label">col 2</span><div class="bar-track"><div class="bar-fill" style="width:7.00%"></div></div><span class="bar-count">7</span></div>
+<div class="bar-row"><span class="bar-label">col 3</span><div class="bar-track"><div class="bar-fill" style="width:57.00%"></div></div><span class="bar-count">57</span></div>
+<div class="bar-row"><span class="bar-label">col 4</span><div class="bar-track"><div class="bar-fill" style="width:4.00%"></div></div><span class="bar-count">4</span></div>
+<div class="bar-row"><span class="bar-label">col 5</span><div class="bar-track"><div class="bar-fill" style="width:11.00%"></div></div><span class="bar-count">11</span></div>
+<div class="bar-row"><span class="bar-label">col 6</span><div class="bar-track"><div class="bar-fill" style="width:8.00%"></div></div><span class="bar-count">8</span></div>
+</div>
+<h4>step-0004096 &mdash; vs minimax</h4>
+<div class="bars">
+<div class="bar-row"><span class="bar-label">col 3</span><div class="bar-track"><div class="bar-fill" style="width:100.00%"></div></div><span class="bar-count">100</span></div>
+</div>
+<h4>step-0012288 &mdash; vs random</h4>
+<div class="bars">
+<div class="bar-row"><span class="bar-label">col 0</span><div class="bar-track"><div class="bar-fill" style="width:9.00%"></div></div><span class="bar-count">9</span></div>
+<div class="bar-row"><span class="bar-label">col 1</span><div class="bar-track"><div class="bar-fill" style="width:6.00%"></div></div><span class="bar-count">6</span></div>
+<div class="bar-row"><span class="bar-label">col 2</span><div class="bar-track"><div class="bar-fill" style="width:8.00%"></div></div><span class="bar-count">8</span></div>
+<div class="bar-row"><span class="bar-label">col 3</span><div class="bar-track"><div class="bar-fill" style="width:59.00%"></div></div><span class="bar-count">59</span></div>
+<div class="bar-row"><span class="bar-label">col 4</span><div class="bar-track"><div class="bar-fill" style="width:2.00%"></div></div><span class="bar-count">2</span></div>
+<div class="bar-row"><span class="bar-label">col 5</span><div class="bar-track"><div class="bar-fill" style="width:10.00%"></div></div><span class="bar-count">10</span></div>
+<div class="bar-row"><span class="bar-label">col 6</span><div class="bar-track"><div class="bar-fill" style="width:6.00%"></div></div><span class="bar-count">6</span></div>
+</div>
+<h4>step-0012288 &mdash; vs minimax</h4>
+<div class="bars">
+<div class="bar-row"><span class="bar-label">col 3</span><div class="bar-track"><div class="bar-fill" style="width:100.00%"></div></div><span class="bar-count">100</span></div>
+</div>
+<h4>step-0028672 &mdash; vs random</h4>
+<div class="bars">
+<div class="bar-row"><span class="bar-label">col 0</span><div class="bar-track"><div class="bar-fill" style="width:6.00%"></div></div><span class="bar-count">6</span></div>
+<div class="bar-row"><span class="bar-label">col 1</span><div class="bar-track"><div class="bar-fill" style="width:12.00%"></div></div><span class="bar-count">12</span></div>
+<div class="bar-row"><span class="bar-label">col 2</span><div class="bar-track"><div class="bar-fill" style="width:4.00%"></div></div><span class="bar-count">4</span></div>
+<div class="bar-row"><span class="bar-label">col 3</span><div class="bar-track"><div class="bar-fill" style="width:59.00%"></div></div><span class="bar-count">59</span></div>
+<div class="bar-row"><span class="bar-label">col 4</span><div class="bar-track"><div class="bar-fill" style="width:7.00%"></div></div><span class="bar-count">7</span></div>
+<div class="bar-row"><span class="bar-label">col 5</span><div class="bar-track"><div class="bar-fill" style="width:4.00%"></div></div><span class="bar-count">4</span></div>
+<div class="bar-row"><span class="bar-label">col 6</span><div class="bar-track"><div class="bar-fill" style="width:8.00%"></div></div><span class="bar-count">8</span></div>
+</div>
+<h4>step-0028672 &mdash; vs minimax</h4>
+<div class="bars">
+<div class="bar-row"><span class="bar-label">col 3</span><div class="bar-track"><div class="bar-fill" style="width:100.00%"></div></div><span class="bar-count">100</span></div>
+</div>
+<h4>step-0061440 &mdash; vs random</h4>
+<div class="bars">
+<div class="bar-row"><span class="bar-label">col 0</span><div class="bar-track"><div class="bar-fill" style="width:5.00%"></div></div><span class="bar-count">5</span></div>
+<div class="bar-row"><span class="bar-label">col 1</span><div class="bar-track"><div class="bar-fill" style="width:7.00%"></div></div><span class="bar-count">7</span></div>
+<div class="bar-row"><span class="bar-label">col 2</span><div class="bar-track"><div class="bar-fill" style="width:9.00%"></div></div><span class="bar-count">9</span></div>
+<div class="bar-row"><span class="bar-label">col 3</span><div class="bar-track"><div class="bar-fill" style="width:60.00%"></div></div><span class="bar-count">60</span></div>
+<div class="bar-row"><span class="bar-label">col 4</span><div class="bar-track"><div class="bar-fill" style="width:2.00%"></div></div><span class="bar-count">2</span></div>
+<div class="bar-row"><span class="bar-label">col 5</span><div class="bar-track"><div class="bar-fill" style="width:10.00%"></div></div><span class="bar-count">10</span></div>
+<div class="bar-row"><span class="bar-label">col 6</span><div class="bar-track"><div class="bar-fill" style="width:7.00%"></div></div><span class="bar-count">7</span></div>
+</div>
+<h4>step-0061440 &mdash; vs minimax</h4>
+<div class="bars">
+<div class="bar-row"><span class="bar-label">col 3</span><div class="bar-track"><div class="bar-fill" style="width:100.00%"></div></div><span class="bar-count">100</span></div>
+</div>
+<h4>step-0126976 &mdash; vs random</h4>
+<div class="bars">
+<div class="bar-row"><span class="bar-label">col 0</span><div class="bar-track"><div class="bar-fill" style="width:3.00%"></div></div><span class="bar-count">3</span></div>
+<div class="bar-row"><span class="bar-label">col 1</span><div class="bar-track"><div class="bar-fill" style="width:10.00%"></div></div><span class="bar-count">10</span></div>
+<div class="bar-row"><span class="bar-label">col 2</span><div class="bar-track"><div class="bar-fill" style="width:9.00%"></div></div><span class="bar-count">9</span></div>
+<div class="bar-row"><span class="bar-label">col 3</span><div class="bar-track"><div class="bar-fill" style="width:55.00%"></div></div><span class="bar-count">55</span></div>
+<div class="bar-row"><span class="bar-label">col 4</span><div class="bar-track"><div class="bar-fill" style="width:7.00%"></div></div><span class="bar-count">7</span></div>
+<div class="bar-row"><span class="bar-label">col 5</span><div class="bar-track"><div class="bar-fill" style="width:9.00%"></div></div><span class="bar-count">9</span></div>
+<div class="bar-row"><span class="bar-label">col 6</span><div class="bar-track"><div class="bar-fill" style="width:7.00%"></div></div><span class="bar-count">7</span></div>
+</div>
+<h4>step-0126976 &mdash; vs minimax</h4>
+<div class="bars">
+<div class="bar-row"><span class="bar-label">col 3</span><div class="bar-track"><div class="bar-fill" style="width:100.00%"></div></div><span class="bar-count">100</span></div>
+</div>
+</section>
+<section id="head-to-head">
+  <h2>Head-to-head win rates (row vs column)</h2>
+  <table>
+    <thead><tr><th></th><th>step-0004096</th><th>baseline</th><th>step-0012288</th><th>step-0028672</th><th>step-0061440</th><th>step-0126976</th></tr></thead>
+    <tbody>
+<tr><th>step-0004096</th><td class="diagonal">&mdash;</td><td>50.0% (50-50-0)</td><td>50.0% (50-50-0)</td><td>50.0% (50-50-0)</td><td>50.0% (50-50-0)</td><td>50.0% (50-50-0)</td></tr>
+<tr><th>baseline</th><td>50.0% (50-50-0)</td><td class="diagonal">&mdash;</td><td>50.0% (50-50-0)</td><td>50.0% (50-50-0)</td><td>50.0% (50-50-0)</td><td>50.0% (50-50-0)</td></tr>
+<tr><th>step-0012288</th><td>50.0% (50-50-0)</td><td>50.0% (50-50-0)</td><td class="diagonal">&mdash;</td><td>50.0% (50-50-0)</td><td>50.0% (50-50-0)</td><td>50.0% (50-50-0)</td></tr>
+<tr><th>step-0028672</th><td>50.0% (50-50-0)</td><td>50.0% (50-50-0)</td><td>50.0% (50-50-0)</td><td class="diagonal">&mdash;</td><td>50.0% (50-50-0)</td><td>50.0% (50-50-0)</td></tr>
+<tr><th>step-0061440</th><td>50.0% (50-50-0)</td><td>50.0% (50-50-0)</td><td>50.0% (50-50-0)</td><td>50.0% (50-50-0)</td><td class="diagonal">&mdash;</td><td>50.0% (50-50-0)</td></tr>
+<tr><th>step-0126976</th><td>50.0% (50-50-0)</td><td>50.0% (50-50-0)</td><td>50.0% (50-50-0)</td><td>50.0% (50-50-0)</td><td>50.0% (50-50-0)</td><td class="diagonal">&mdash;</td></tr>
+    </tbody>
+  </table>
+</section>
+<script type="application/json" id="progress-data">{"format": "gamesim.incremental-training/v2", "stages": [{"label": "baseline", "cumulative_timesteps": 0, "vs_random": {"opponent": "random", "total_games": 100, "wins": 78, "losses": 22, "draws": 0, "win_rate": 0.78, "game_length_mean": 12.3, "opening_move_distribution": [[0, 7], [1, 8], [2, 7], [3, 9], [4, 6], [5, 58], [6, 5]]}, "vs_minimax": {"opponent": "minimax", "total_games": 100, "wins": 0, "losses": 100, "draws": 0, "win_rate": 0.0, "game_length_mean": 10.5, "opening_move_distribution": [[3, 50], [5, 50]]}, "match_log_paths": {"random": "matches/baseline-vs-random.zip", "minimax": "matches/baseline-vs-minimax.zip"}}, {"label": "step-0004096", "cumulative_timesteps": 4096, "vs_random": {"opponent": "random", "total_games": 100, "wins": 75, "losses": 25, "draws": 0, "win_rate": 0.75, "game_length_mean": 16.17, "opening_move_distribution": [[0, 8], [1, 5], [2, 7], [3, 57], [4, 4], [5, 11], [6, 8]]}, "vs_minimax": {"opponent": "minimax", "total_games": 100, "wins": 0, "losses": 100, "draws": 0, "win_rate": 0.0, "game_length_mean": 18.5, "opening_move_distribution": [[3, 100]]}, "match_log_paths": {"random": "matches/step-0004096-vs-random.zip", "minimax": "matches/step-0004096-vs-minimax.zip"}}, {"label": "step-0012288", "cumulative_timesteps": 12288, "vs_random": {"opponent": "random", "total_games": 100, "wins": 80, "losses": 20, "draws": 0, "win_rate": 0.8, "game_length_mean": 16.14, "opening_move_distribution": [[0, 9], [1, 6], [2, 8], [3, 59], [4, 2], [5, 10], [6, 6]]}, "vs_minimax": {"opponent": "minimax", "total_games": 100, "wins": 0, "losses": 100, "draws": 0, "win_rate": 0.0, "game_length_mean": 24.5, "opening_move_distribution": [[3, 100]]}, "match_log_paths": {"random": "matches/step-0012288-vs-random.zip", "minimax": "matches/step-0012288-vs-minimax.zip"}}, {"label": "step-0028672", "cumulative_timesteps": 28672, "vs_random": {"opponent": "random", "total_games": 100, "wins": 76, "losses": 24, "draws": 0, "win_rate": 0.76, "game_length_mean": 16.3, "opening_move_distribution": [[0, 6], [1, 12], [2, 4], [3, 59], [4, 7], [5, 4], [6, 8]]}, "vs_minimax": {"opponent": "minimax", "total_games": 100, "wins": 0, "losses": 100, "draws": 0, "win_rate": 0.0, "game_length_mean": 13.5, "opening_move_distribution": [[3, 100]]}, "match_log_paths": {"random": "matches/step-0028672-vs-random.zip", "minimax": "matches/step-0028672-vs-minimax.zip"}}, {"label": "step-0061440", "cumulative_timesteps": 61440, "vs_random": {"opponent": "random", "total_games": 100, "wins": 82, "losses": 18, "draws": 0, "win_rate": 0.82, "game_length_mean": 14.36, "opening_move_distribution": [[0, 5], [1, 7], [2, 9], [3, 60], [4, 2], [5, 10], [6, 7]]}, "vs_minimax": {"opponent": "minimax", "total_games": 100, "wins": 0, "losses": 100, "draws": 0, "win_rate": 0.0, "game_length_mean": 11.5, "opening_move_distribution": [[3, 100]]}, "match_log_paths": {"random": "matches/step-0061440-vs-random.zip", "minimax": "matches/step-0061440-vs-minimax.zip"}}, {"label": "step-0126976", "cumulative_timesteps": 126976, "vs_random": {"opponent": "random", "total_games": 100, "wins": 77, "losses": 23, "draws": 0, "win_rate": 0.77, "game_length_mean": 16.71, "opening_move_distribution": [[0, 3], [1, 10], [2, 9], [3, 55], [4, 7], [5, 9], [6, 7]]}, "vs_minimax": {"opponent": "minimax", "total_games": 100, "wins": 0, "losses": 100, "draws": 0, "win_rate": 0.0, "game_length_mean": 13.5, "opening_move_distribution": [[3, 100]]}, "match_log_paths": {"random": "matches/step-0126976-vs-random.zip", "minimax": "matches/step-0126976-vs-minimax.zip"}}], "head_to_head": [{"row": "step-0004096", "column": "baseline", "wins": 50, "losses": 50, "draws": 0, "games": 100, "win_rate": 0.5, "loss_rate": 0.5, "draw_rate": 0.0}, {"row": "baseline", "column": "step-0004096", "wins": 50, "losses": 50, "draws": 0, "games": 100, "win_rate": 0.5, "loss_rate": 0.5, "draw_rate": 0.0}, {"row": "step-0012288", "column": "baseline", "wins": 50, "losses": 50, "draws": 0, "games": 100, "win_rate": 0.5, "loss_rate": 0.5, "draw_rate": 0.0}, {"row": "baseline", "column": "step-0012288", "wins": 50, "losses": 50, "draws": 0, "games": 100, "win_rate": 0.5, "loss_rate": 0.5, "draw_rate": 0.0}, {"row": "step-0012288", "column": "step-0004096", "wins": 50, "losses": 50, "draws": 0, "games": 100, "win_rate": 0.5, "loss_rate": 0.5, "draw_rate": 0.0}, {"row": "step-0004096", "column": "step-0012288", "wins": 50, "losses": 50, "draws": 0, "games": 100, "win_rate": 0.5, "loss_rate": 0.5, "draw_rate": 0.0}, {"row": "step-0028672", "column": "baseline", "wins": 50, "losses": 50, "draws": 0, "games": 100, "win_rate": 0.5, "loss_rate": 0.5, "draw_rate": 0.0}, {"row": "baseline", "column": "step-0028672", "wins": 50, "losses": 50, "draws": 0, "games": 100, "win_rate": 0.5, "loss_rate": 0.5, "draw_rate": 0.0}, {"row": "step-0028672", "column": "step-0004096", "wins": 50, "losses": 50, "draws": 0, "games": 100, "win_rate": 0.5, "loss_rate": 0.5, "draw_rate": 0.0}, {"row": "step-0004096", "column": "step-0028672", "wins": 50, "losses": 50, "draws": 0, "games": 100, "win_rate": 0.5, "loss_rate": 0.5, "draw_rate": 0.0}, {"row": "step-0028672", "column": "step-0012288", "wins": 50, "losses": 50, "draws": 0, "games": 100, "win_rate": 0.5, "loss_rate": 0.5, "draw_rate": 0.0}, {"row": "step-0012288", "column": "step-0028672", "wins": 50, "losses": 50, "draws": 0, "games": 100, "win_rate": 0.5, "loss_rate": 0.5, "draw_rate": 0.0}, {"row": "step-0061440", "column": "baseline", "wins": 50, "losses": 50, "draws": 0, "games": 100, "win_rate": 0.5, "loss_rate": 0.5, "draw_rate": 0.0}, {"row": "baseline", "column": "step-0061440", "wins": 50, "losses": 50, "draws": 0, "games": 100, "win_rate": 0.5, "loss_rate": 0.5, "draw_rate": 0.0}, {"row": "step-0061440", "column": "step-0004096", "wins": 50, "losses": 50, "draws": 0, "games": 100, "win_rate": 0.5, "loss_rate": 0.5, "draw_rate": 0.0}, {"row": "step-0004096", "column": "step-0061440", "wins": 50, "losses": 50, "draws": 0, "games": 100, "win_rate": 0.5, "loss_rate": 0.5, "draw_rate": 0.0}, {"row": "step-0061440", "column": "step-0012288", "wins": 50, "losses": 50, "draws": 0, "games": 100, "win_rate": 0.5, "loss_rate": 0.5, "draw_rate": 0.0}, {"row": "step-0012288", "column": "step-0061440", "wins": 50, "losses": 50, "draws": 0, "games": 100, "win_rate": 0.5, "loss_rate": 0.5, "draw_rate": 0.0}, {"row": "step-0061440", "column": "step-0028672", "wins": 50, "losses": 50, "draws": 0, "games": 100, "win_rate": 0.5, "loss_rate": 0.5, "draw_rate": 0.0}, {"row": "step-0028672", "column": "step-0061440", "wins": 50, "losses": 50, "draws": 0, "games": 100, "win_rate": 0.5, "loss_rate": 0.5, "draw_rate": 0.0}, {"row": "step-0126976", "column": "baseline", "wins": 50, "losses": 50, "draws": 0, "games": 100, "win_rate": 0.5, "loss_rate": 0.5, "draw_rate": 0.0}, {"row": "baseline", "column": "step-0126976", "wins": 50, "losses": 50, "draws": 0, "games": 100, "win_rate": 0.5, "loss_rate": 0.5, "draw_rate": 0.0}, {"row": "step-0126976", "column": "step-0004096", "wins": 50, "losses": 50, "draws": 0, "games": 100, "win_rate": 0.5, "loss_rate": 0.5, "draw_rate": 0.0}, {"row": "step-0004096", "column": "step-0126976", "wins": 50, "losses": 50, "draws": 0, "games": 100, "win_rate": 0.5, "loss_rate": 0.5, "draw_rate": 0.0}, {"row": "step-0126976", "column": "step-0012288", "wins": 50, "losses": 50, "draws": 0, "games": 100, "win_rate": 0.5, "loss_rate": 0.5, "draw_rate": 0.0}, {"row": "step-0012288", "column": "step-0126976", "wins": 50, "losses": 50, "draws": 0, "games": 100, "win_rate": 0.5, "loss_rate": 0.5, "draw_rate": 0.0}, {"row": "step-0126976", "column": "step-0028672", "wins": 50, "losses": 50, "draws": 0, "games": 100, "win_rate": 0.5, "loss_rate": 0.5, "draw_rate": 0.0}, {"row": "step-0028672", "column": "step-0126976", "wins": 50, "losses": 50, "draws": 0, "games": 100, "win_rate": 0.5, "loss_rate": 0.5, "draw_rate": 0.0}, {"row": "step-0126976", "column": "step-0061440", "wins": 50, "losses": 50, "draws": 0, "games": 100, "win_rate": 0.5, "loss_rate": 0.5, "draw_rate": 0.0}, {"row": "step-0061440", "column": "step-0126976", "wins": 50, "losses": 50, "draws": 0, "games": 100, "win_rate": 0.5, "loss_rate": 0.5, "draw_rate": 0.0}]}</script>
+</body>
+</html>
