@@ -3,7 +3,7 @@
 # Quick start:
 #   make install     # create .venv and install the package + dev tools
 #   make test        # run the test suite
-#   make check       # lint + type-check + test (run this before committing)
+#   make check       # lint + format check + type-check + test
 #
 # Run `make` or `make help` to list all targets.
 #
@@ -46,10 +46,12 @@ venv: $(VENV_PY) ## Create the virtual environment (.venv) if missing
 .PHONY: install
 install: $(VENV_PY) ## Create venv and install the package + dev tools
 	$(PIP) install -e ".[dev]"
+	$(VENV_PY) -m pre_commit install
 
 .PHONY: install-rl
 install-rl: $(VENV_PY) ## Also install the DRL extras (Phase 2: torch, sb3, etc.)
 	$(PIP) install -e ".[dev,rl]"
+	$(VENV_PY) -m pre_commit install
 
 ## ---------------------------------------------------------------------------
 ## Quality gates
@@ -76,12 +78,20 @@ format: ## Auto-format with ruff
 	$(VENV_PY) -m ruff format src tests
 	$(VENV_PY) -m ruff check --fix src tests
 
+.PHONY: format-check
+format-check: ## Verify formatting with ruff
+	$(VENV_PY) -m ruff format --check src tests
+
 .PHONY: typecheck
 typecheck: ## Static type-check with mypy (strict)
 	$(VENV_PY) -m mypy
 
 .PHONY: check
-check: lint typecheck test ## Run all quality gates (do this before committing)
+check: lint format-check typecheck test ## Run all quality gates
+
+.PHONY: hooks
+hooks: ## Run every pre-commit hook across the repository
+	$(VENV_PY) -m pre_commit run --all-files
 
 ## ---------------------------------------------------------------------------
 ## Training (Phase 2b -- needs `make install-rl`; not run in the dev sandbox)

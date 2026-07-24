@@ -49,8 +49,13 @@ With `make` (macOS, Linux, WSL, or Git Bash on Windows):
 ```bash
 make install   # create .venv and install the package + dev tools
 make test      # run the test suite
-make check     # lint + type-check + test (run before committing)
+make check     # lint + format check + type-check + test
 ```
+
+`make install` also installs the repository's pre-commit hook. It automatically
+applies Ruff fixes and formatting to staged Python files; stage the resulting
+changes and commit again. Use `make hooks` to run the same hook suite across the
+whole repository.
 
 On Windows, the Makefile uses the Python launcher (`py -3`) by default because
 `python3` is often only a Microsoft Store alias. Install Python 3.10+ from
@@ -70,6 +75,7 @@ python -m venv .venv
 .venv\Scripts\Activate.ps1        # macOS/Linux: source .venv/bin/activate
 python -m pip install --upgrade pip
 pip install -e ".[dev]"
+python -m pre_commit install
 pytest
 ```
 
@@ -82,6 +88,9 @@ After training, evaluate the saved policy against random and minimax baselines:
 make train TIMESTEPS=100000 SEED=0
 make evaluate GAMES=100
 ```
+
+Both CLIs show Rich progress bars with elapsed/estimated remaining time and live
+stats. Use `--no-progress` if you want plain output for logs or scripts.
 
 The default checkpoint is `checkpoints/connect_four_maskable_ppo.zip`. You can
 evaluate just one baseline or point at another checkpoint:
