@@ -54,12 +54,24 @@ ruff + format + mypy --strict clean; built via orchestrated sub agents (implemen
 exercise the trained web opponent, `record-matches` with a checkpoint, and the incremental
 progress run end to end.
 
-## Phase 4 — Prove game-agnosticism + optional ECS  ☐
-Add a second simple game (candidate: Nim or Tic-Tac-Toe) reusing core/agents/logging/DRL
-with only game-specific code. Introduce a lightweight ECS layer where it earns its keep.
-Refactor any Connect-Four-specific assumptions that leaked into `core`.
-**Validates:** the framework is genuinely game-agnostic; ECS pattern established.
-**Exit:** second game trains through the same pipeline with no `core` changes.
+## Phase 4 — Prove game-agnosticism: Euchre (4-player, hidden info, teams)  ☐
+Add Euchre as the second game, reusing core/agents/logging/DRL with only game-specific
+code. **Decision 2026-07-24:** replaces the originally-planned Nim/Tic-Tac-Toe
+placeholder — a trivial second game would only have proven the file-layout axis of
+agnosticism. Euchre additionally exercises N=4 agents with fixed partnerships, the
+hidden-information observation boundary (Connect Four had none), and a heterogeneous
+multi-phase action space (bidding, discard, trick play), all of which MTG (Phase 5) will
+need for real. Refactor any Connect-Four-specific assumptions that leaked into `core`.
+Introduce a lightweight ECS layer where it earns its keep (not expected to be needed yet
+— Euchre's state is still small enough for a plain dataclass, per Connect Four's
+precedent). → [phase-04-euchre.md](phase-04-euchre.md)
+**Validates:** the framework is genuinely game-agnostic; N-player/team scoring; the
+hidden-info observation boundary; ECS pattern established if/when it earns its keep.
+**Exit:** Euchre hands play correctly through the same `core` interfaces with no `core`
+changes; see phase-04-euchre.md's definition of done for the full bar (bower rules,
+going alone, stick-the-dealer, observation boundary, determinism). DRL training through
+the same pipeline is a natural follow-up once the engine is proven, not required to
+close this phase (mirrors how Phase 1 shipped the engine before Phase 2 added DRL).
 
 ## Phase 5 — MTG groundwork  ☐
 The hard target, incrementally. Cards-as-data + effect primitives; the stack & priority
