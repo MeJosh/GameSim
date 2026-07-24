@@ -52,6 +52,14 @@ make test      # run the test suite
 make check     # lint + type-check + test (run before committing)
 ```
 
+On Windows, the Makefile uses the Python launcher (`py -3`) by default because
+`python3` is often only a Microsoft Store alias. Install Python 3.10+ from
+python.org, or override the interpreter if needed:
+
+```bash
+make install-rl PYTHON=python
+```
+
 Run `make help` to list every target (`format`, `typecheck`, `test-cov`,
 `install-rl`, `clean`, ...).
 
@@ -67,6 +75,21 @@ pytest
 
 The DRL stack is a separate extra so you don't pull in torch until you start
 training: `make install-rl` (or `pip install -e ".[dev,rl]"`).
+
+After training, evaluate the saved policy against random and minimax baselines:
+
+```bash
+make train TIMESTEPS=100000 SEED=0
+make evaluate GAMES=100
+```
+
+The default checkpoint is `checkpoints/connect_four_maskable_ppo.zip`. You can
+evaluate just one baseline or point at another checkpoint:
+
+```bash
+make evaluate OPPONENT=random CHECKPOINT=checkpoints/my_run.zip
+make evaluate OPPONENT=minimax GAMES=50
+```
 
 See [`docs/architecture.md`](docs/architecture.md) for the design and
 [`plans/roadmap.md`](plans/roadmap.md) for what's being built next.

@@ -11,14 +11,17 @@
 # Windows). On native Windows without `make`, see the README for the equivalent
 # raw commands.
 
-# Which interpreter to bootstrap the venv from. Override if needed:
-#   make install PYTHON=python3.12
-PYTHON ?= python3
-
 # venv layout differs by OS: Scripts/ on Windows, bin/ elsewhere.
 ifeq ($(OS),Windows_NT)
+    # Windows rarely provides a real `python3` executable; the Python launcher is
+    # the most reliable default for Git Bash/MSYS make. Override if needed:
+    #   make install PYTHON=python
+    PYTHON ?= py -3
     VENV_BIN := .venv/Scripts
 else
+    # Which interpreter to bootstrap the venv from. Override if needed:
+    #   make install PYTHON=python3.12
+    PYTHON ?= python3
     VENV_BIN := .venv/bin
 endif
 
@@ -87,10 +90,17 @@ check: lint typecheck test ## Run all quality gates (do this before committing)
 # Override on the command line, e.g.: make train TIMESTEPS=200000 SEED=1
 TIMESTEPS ?= 100000
 SEED ?= 0
+GAMES ?= 100
+OPPONENT ?= all
+CHECKPOINT ?= checkpoints/connect_four_maskable_ppo.zip
 
 .PHONY: train
 train: ## Train a Connect Four MaskablePPO agent via self-play (checkpoints/)
 	$(VENV_PY) -m gamesim.rl.train --timesteps $(TIMESTEPS) --seed $(SEED)
+
+.PHONY: evaluate
+evaluate: ## Evaluate a trained checkpoint vs random/minimax baselines
+	$(VENV_PY) -m gamesim.rl.evaluate --checkpoint $(CHECKPOINT) --opponent $(OPPONENT) --games $(GAMES) --seed $(SEED)
 
 ## ---------------------------------------------------------------------------
 ## Housekeeping
