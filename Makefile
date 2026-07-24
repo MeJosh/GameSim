@@ -109,6 +109,8 @@ GAMES ?= 100
 OPPONENT ?= all
 CHECKPOINT ?= checkpoints/connect_four_maskable_ppo.zip
 MATCH_LOG ?= logs/connect_four_trained_vs_random.zip
+AGENT_A ?= trained:$(CHECKPOINT)
+AGENT_B ?= random
 
 .PHONY: train
 train: ## Train a Connect Four MaskablePPO agent via self-play (checkpoints/)
@@ -120,7 +122,7 @@ evaluate: ## Evaluate a trained checkpoint vs random/minimax baselines
 
 .PHONY: record-matches
 record-matches: ## Record trained-vs-random games for replay in the browser UI
-	$(VENV_PY) -m gamesim.rl.record_matches --checkpoint $(CHECKPOINT) --games $(GAMES) --seed $(SEED) --output $(MATCH_LOG)
+	$(VENV_PY) -m gamesim.rl.record_matches --agent-a $(AGENT_A) --agent-b $(AGENT_B) --games $(GAMES) --seed $(SEED) --output $(MATCH_LOG)
 
 .PHONY: serve
 serve: ## Run the local Connect Four browser UI (needs install-web)

@@ -150,3 +150,27 @@ and any training that must actually run in the sandbox.
 - How much charting to inline in the HTML reports without a CDN (keep to simple inline
   SVG/CSS bars for now — no external JS libs, to stay self-contained).
 - Whether the browser explorer should also render the standalone report inline (defer).
+
+---
+
+## As-built notes — Slice 3a (2026-07-23) ✅
+Implemented, independently reviewed, findings fixed. **110 tests pass + 1 skipped**;
+ruff + format + mypy --strict clean; torch-free confirmed.
+- `viz/connect_four.py` — `ConnectFourRenderer` (+ pure `format_board`/`render_board`).
+  Glyphs `.`/`X`/`O`; row 0 at the bottom so it reads upright.
+- `analysis/summary.py` — `MatchSummary` + `summarize_match`: outcomes/winrate, a
+  first-mover breakdown computed per game from `seats[0]` vs winner (reviewer hand-verified
+  the tricky mixed-seat case), game-length stats+histogram, opening + column-usage
+  distributions. Distribution fields are sorted tuples (deterministic, hashable).
+- `analysis/replay.py` — `replay_match_game(game) -> list[BoardGrid]` reconstructs every
+  ply through `ConnectFourEngine` (length moves+1, board[0] empty); reviewer diffed all
+  boards against an independent engine replay.
+- `rl/record_matches.py` — generalized to `--agent-a`/`--agent-b` specs (`random`,
+  `minimax[:depth]`, `trained:<path>`); `build_agent()` unit-testable; trained loading
+  torch-isolated.
+- **Review finding fixed:** the CLI generalization had broken the `make record-matches`
+  target (old `--checkpoint` flag). Makefile now uses `AGENT_A`/`AGENT_B` vars (default
+  `trained:$(CHECKPOINT)` vs `random`, reproducing prior behavior). Bad `minimax:<depth>`
+  now errors clearly.
+- **Deferred to 3c:** `web/game_service.py` still has its own replay logic; fold it onto
+  `replay_match_game` in 3c.
