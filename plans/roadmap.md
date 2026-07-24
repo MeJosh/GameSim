@@ -36,11 +36,17 @@ tested here; the actual training loop is code-complete and runs on the user's ma
 blocked). **Remaining to fully close Phase 2's exit criteria:** run training locally and
 confirm the trained agent beats random ≫50% / is competitive vs. minimax.
 
-## Phase 3 — Visualization (live + replay)  ☐
-A Connect Four renderer. Two modes over one interface: attach to a live game, or load a
-log and step forward/back. Renderers are pure event consumers.
-**Validates:** the optional viz hook, event stream, replay-driven analysis.
-**Exit:** watch a live game; load a recorded game and scrub through it.
+## Phase 3 — Visualization, interaction & progress measurement  ◐
+Interact with a trained model (play vs random/minimax/trained), log a sample of games
+(e.g. model-v-model), step through them + see a summary (portable standalone HTML report
++ the browser explorer), and measure training progress across incremental checkpoints
+(winrate / game length / opening strategy / head-to-head). Builds on the MVP web UI +
+match-logging + incremental-experiment work. → [phase-03-visualization.md](phase-03-visualization.md)
+**Validates:** the viz hook + renderer, engine-replayed analysis, the trained-model
+interaction loop, and progress measurement.
+**Exit:** play a game vs an opponent; record a match, open a self-contained HTML report
+and step through it with a summary; (stretch) a progress report across checkpoints.
+Analysis/report layers are torch-free and tested in-sandbox; model-backed runs are local.
 
 ## Phase 4 — Prove game-agnosticism + optional ECS  ☐
 Add a second simple game (candidate: Nim or Tic-Tac-Toe) reusing core/agents/logging/DRL
