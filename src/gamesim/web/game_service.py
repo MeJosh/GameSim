@@ -14,8 +14,10 @@ from typing import Literal
 from uuid import uuid4
 
 from gamesim.core.agent import Agent, RandomAgent
+from gamesim.core.replay import GameLog, replay_game
 from gamesim.core.types import AgentId
 from gamesim.games.connect_four import ConnectFourEncoder, ConnectFourEngine, ConnectFourObservation
+from gamesim.recording.match_log import MatchGameLog, MatchLog
 from gamesim.rl.train import DEFAULT_CHECKPOINT_DIR, DEFAULT_CHECKPOINT_NAME, MaskablePolicyAgent
 
 OpponentKind = Literal["random", "trained"]
@@ -44,6 +46,39 @@ class GameSnapshot:
     opponent: OpponentKind
 
 
+@dataclass(frozen=True)
+class ReplayGameSummary:
+    """Small, list-friendly description of one recorded game."""
+
+    index: int
+    seats: list[str]
+    outcome: str
+    total_moves: int
+
+
+@dataclass(frozen=True)
+class ReplayMatchSnapshot:
+    """Metadata returned after the browser uploads a match log."""
+
+    match_id: str
+    agent_a: str
+    agent_b: str
+    games: list[ReplayGameSummary]
+
+
+@dataclass(frozen=True)
+class ReplaySnapshot:
+    """An engine-reconstructed state at one move in a recorded game."""
+
+    board: list[list[int]]
+    game_index: int
+    seats: list[str]
+    outcome: str
+    move: int
+    total_moves: int
+    current_player: str | None
+
+
 @dataclass
 class _GameSession:
     engine: ConnectFourEngine
@@ -68,6 +103,7 @@ class ConnectFourGameService:
 
     def __init__(self, trained_agent_loader: TrainedAgentLoader = _load_trained_agent) -> None:
         self._games: dict[str, _GameSession] = {}
+        self._replays: dict[str, MatchLog] = {}
         self._trained_agent_loader = trained_agent_loader
 
     def start_game(
@@ -112,6 +148,70 @@ class ConnectFourGameService:
             self._step(session, opponent_id, action)
         return self._snapshot(game_id, session)
 
+    def load_match(self, record: dict[str, object]) -> ReplayMatchSnapshot:
+        """Validate a match log by replaying every game through the engine."""
+        try:
+            match_log = MatchLog.from_dict(record)
+        except ValueError as error:
+            raise GameServiceError(f"invalid match log: {error}") from error
+        return self._store_match(match_log)
+
+    def load_match_archive(self, payload: bytes) -> ReplayMatchSnapshot:
+        """Validate an uploaded ZIP match archive before exposing its replay states."""
+        try:
+            match_log = MatchLog.from_archive_bytes(payload)
+        except ValueError as error:
+            raise GameServiceError(f"invalid match archive: {error}") from error
+        return self._store_match(match_log)
+
+    def _store_match(self, match_log: MatchLog) -> ReplayMatchSnapshot:
+        for game in match_log.games:
+            try:
+                self._validate_game(match_log, game)
+            except ValueError as error:
+                raise GameServiceError(f"invalid match log: {error}") from error
+
+        match_id = str(uuid4())
+        self._replays[match_id] = match_log
+        return ReplayMatchSnapshot(
+            match_id=match_id,
+            agent_a=match_log.agent_a,
+            agent_b=match_log.agent_b,
+            games=[
+                ReplayGameSummary(
+                    index=game.index,
+                    seats=list(game.seats),
+                    outcome=self._outcome_label(match_log, game),
+                    total_moves=len(game.actions),
+                )
+                for game in match_log.games
+            ],
+        )
+
+    def replay_at(self, match_id: str, game_index: int, move: int) -> ReplaySnapshot:
+        """Reconstruct a specific recorded turn through the authoritative engine."""
+        match_log = self._replays.get(match_id)
+        if match_log is None:
+            raise GameServiceError(f"unknown replay match: {match_id}")
+        if not 0 <= game_index < len(match_log.games):
+            raise GameServiceError(f"unknown game index: {game_index}")
+        game = match_log.games[game_index]
+        if not 0 <= move <= len(game.actions):
+            raise GameServiceError(f"move must be between 0 and {len(game.actions)}")
+
+        engine = ConnectFourEngine()
+        replay_game(engine, self._game_log(game), up_to=move)
+        current_player = None if engine.is_terminal() else game.seats[int(engine.current_agent())]
+        return ReplaySnapshot(
+            board=engine.observation(AgentId(0)).board.astype(int).tolist(),
+            game_index=game.index,
+            seats=list(game.seats),
+            outcome=self._outcome_label(match_log, game),
+            move=move,
+            total_moves=len(game.actions),
+            current_player=current_player,
+        )
+
     @staticmethod
     def _step(session: _GameSession, agent: AgentId, column: int) -> None:
         session.engine.step(agent, column)
@@ -148,3 +248,41 @@ class ConnectFourGameService:
             moves=list(session.moves),
             opponent=session.opponent_kind,
         )
+
+    @staticmethod
+    def _game_log(game: MatchGameLog) -> GameLog:
+        return GameLog(
+            seed=game.seed,
+            actions=tuple((AgentId(agent), action) for agent, action in game.actions),
+        )
+
+    @classmethod
+    def _validate_game(cls, match_log: MatchLog, game: MatchGameLog) -> None:
+        engine = ConnectFourEngine()
+        replay_game(engine, cls._game_log(game))
+        if not engine.is_terminal():
+            raise ValueError(f"game {game.index} does not reach a terminal state")
+        expected_outcome = cls._outcome_from_rewards(match_log, game, engine)
+        if game.outcome != expected_outcome:
+            raise ValueError(f"game {game.index} outcome does not match its actions")
+
+    @staticmethod
+    def _outcome_from_rewards(
+        match_log: MatchLog, game: MatchGameLog, engine: ConnectFourEngine
+    ) -> str:
+        rewards = engine.rewards()
+        if rewards[AgentId(0)] == rewards[AgentId(1)]:
+            return "draw"
+        winning_seat = AgentId(0) if rewards[AgentId(0)] > rewards[AgentId(1)] else AgentId(1)
+        winner = game.seats[int(winning_seat)]
+        if winner == match_log.agent_a:
+            return "agent_a"
+        if winner == match_log.agent_b:
+            return "agent_b"
+        raise ValueError(f"game {game.index} names a seat outside the match agents")
+
+    @classmethod
+    def _outcome_label(cls, match_log: MatchLog, game: MatchGameLog) -> str:
+        if game.outcome == "draw":
+            return "draw"
+        return match_log.agent_a if game.outcome == "agent_a" else match_log.agent_b

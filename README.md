@@ -99,6 +99,18 @@ checkpoint at `checkpoints/connect_four_maskable_ppo.zip`; use the random oppone
 without the RL dependencies installed. The service is local and in-memory, so active
 games are not persisted when the server stops.
 
+Record a reproducible trained-versus-random match for the **Replay** tab with:
+
+```bash
+make record-matches GAMES=100
+```
+
+This writes `logs/connect_four_trained_vs_random.zip`. The archive contains a
+`manifest.json` index plus one replayable JSON file per game under `games/`. Open the
+Replay tab, choose that file, select a game from the left list, then use the arrow
+buttons or left/right arrow keys to inspect each engine-reconstructed turn. Recording
+requires the RL and web extras: `pip install -e ".[dev,rl,web]"`.
+
 After training, evaluate the saved policy against random and minimax baselines:
 
 ```bash

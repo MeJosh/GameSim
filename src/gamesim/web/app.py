@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import base64
+import binascii
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
@@ -23,6 +25,14 @@ class NewGameRequest(BaseModel):
 
 class MoveRequest(BaseModel):
     column: int
+
+
+class ReplayLoadRequest(BaseModel):
+    log: dict[str, Any]
+
+
+class ReplayArchiveRequest(BaseModel):
+    archive_base64: str
 
 
 def create_app(service: ConnectFourGameService | None = None) -> FastAPI:
@@ -58,6 +68,31 @@ def create_app(service: ConnectFourGameService | None = None) -> FastAPI:
         except GameServiceError as error:
             raise HTTPException(status_code=409, detail=str(error)) from error
         except ValueError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+        return snapshot.__dict__
+
+    @app.post("/api/replays")
+    def load_replay(request: ReplayLoadRequest) -> dict[str, object]:
+        try:
+            snapshot = game_service.load_match(request.log)
+        except GameServiceError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+        return snapshot.__dict__
+
+    @app.post("/api/replays/archive")
+    def load_replay_archive(request: ReplayArchiveRequest) -> dict[str, object]:
+        try:
+            payload = base64.b64decode(request.archive_base64, validate=True)
+            snapshot = game_service.load_match_archive(payload)
+        except (GameServiceError, binascii.Error) as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+        return snapshot.__dict__
+
+    @app.get("/api/replays/{match_id}/games/{game_index}")
+    def replay_at(match_id: str, game_index: int, move: int = 0) -> dict[str, object]:
+        try:
+            snapshot = game_service.replay_at(match_id, game_index, move)
+        except GameServiceError as error:
             raise HTTPException(status_code=422, detail=str(error)) from error
         return snapshot.__dict__
 

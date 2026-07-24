@@ -12,16 +12,55 @@
         <p class="eyebrow">GameSim local play</p>
         <h1>Connect Four</h1>
       </header>
-      <section class="controls" aria-label="Game setup">
-        <label for="opponent">Opponent</label>
-        <select id="opponent" name="opponent">
-          <option value="random">Random</option>
-          <option value="trained">Trained policy</option>
-        </select>
-        <button id="new-game" type="button">New game</button>
+      <nav class="tabs" aria-label="Connect Four modes">
+        <button class="tab active" id="play-tab" type="button">Play</button>
+        <button class="tab" id="replay-tab" type="button">Replay</button>
+      </nav>
+      <section id="play-panel">
+        <section class="controls" aria-label="Game setup">
+          <label for="opponent">Opponent</label>
+          <select id="opponent" name="opponent">
+            <option value="random">Random</option>
+            <option value="trained">Trained policy</option>
+          </select>
+          <button id="new-game" type="button">New game</button>
+        </section>
+        <p id="status" class="status" aria-live="polite">Starting game...</p>
+        <section id="board" class="board" aria-label="Connect Four board"></section>
       </section>
-      <p id="status" class="status" aria-live="polite">Starting game...</p>
-      <section id="board" class="board" aria-label="Connect Four board"></section>
+      <section id="replay-panel" hidden>
+        <section class="controls replay-load" aria-label="Replay log">
+          <label id="drop-zone" class="drop-zone" for="log-file">
+            <span>Drop a match archive here or browse</span>
+            <input id="log-file" type="file" accept="application/zip,.zip,application/json,.json">
+          </label>
+          <span id="replay-status" class="status" aria-live="polite"></span>
+        </section>
+        <section id="replay-insights" class="replay-insights" hidden>
+          <section class="chart" aria-labelledby="winner-chart-heading">
+            <h2 id="winner-chart-heading">Wins</h2>
+            <div id="winner-chart" class="winner-chart"></div>
+          </section>
+          <section class="chart" aria-labelledby="turn-chart-heading">
+            <h2 id="turn-chart-heading">Turns per game</h2>
+            <div id="turn-chart" class="turn-chart"></div>
+          </section>
+        </section>
+        <section class="replay-layout">
+          <aside class="game-sidebar" aria-label="Recorded games">
+            <div id="game-list" class="game-list"></div>
+          </aside>
+          <section class="replay-viewer" aria-label="Game replay">
+            <p id="replay-turn" class="status">Load a match log to browse its games.</p>
+            <section id="replay-board" class="board replay-board" aria-label="Replay board"></section>
+            <div class="replay-controls">
+              <button id="previous-move" type="button" aria-label="Previous move">&#8592;</button>
+              <span id="move-counter">0 / 0</span>
+              <button id="next-move" type="button" aria-label="Next move">&#8594;</button>
+            </div>
+          </section>
+        </section>
+      </section>
     </main>
     <script src="/static/app.js"></script>
   </body>

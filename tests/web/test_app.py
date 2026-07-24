@@ -6,6 +6,8 @@
 
 from __future__ import annotations
 
+import base64
+
 import pytest
 
 fastapi = pytest.importorskip("fastapi")
@@ -13,6 +15,9 @@ pytest.importorskip("httpx")
 
 from fastapi.testclient import TestClient
 
+from gamesim.core.agent import RandomAgent
+from gamesim.games.connect_four import ConnectFourObservation
+from gamesim.recording import record_match
 from gamesim.web.app import create_app
 from gamesim.web.game_service import ConnectFourGameService
 
@@ -41,3 +46,47 @@ def test_api_returns_validation_error_for_illegal_column() -> None:
 
     assert response.status_code == 422
     assert "out of range" in response.json()["detail"]
+
+
+def test_api_loads_a_match_log_and_replays_a_turn() -> None:
+    match = record_match(
+        RandomAgent[ConnectFourObservation](seed=1),
+        RandomAgent[ConnectFourObservation](seed=2),
+        agent_a_name="trained",
+        agent_b_name="random",
+        num_games=1,
+        seed=3,
+    )
+    client = TestClient(create_app())
+
+    loaded = client.post("/api/replays", json={"log": match.to_dict()})
+    assert loaded.status_code == 200
+    match_summary = loaded.json()
+    match_id = match_summary["match_id"]
+    assert match_summary["games"][0]["outcome"] in {"trained", "random", "draw"}
+    assert match_summary["games"][0]["total_moves"] > 0
+
+    replay = client.get(f"/api/replays/{match_id}/games/0?move=1")
+    assert replay.status_code == 200
+    assert replay.json()["move"] == 1
+
+
+def test_api_loads_a_match_archive_and_replays_a_turn() -> None:
+    match = record_match(
+        RandomAgent[ConnectFourObservation](seed=1),
+        RandomAgent[ConnectFourObservation](seed=2),
+        agent_a_name="trained",
+        agent_b_name="random",
+        num_games=1,
+        seed=3,
+    )
+    client = TestClient(create_app())
+    payload = base64.b64encode(match.to_archive_bytes()).decode("ascii")
+
+    loaded = client.post("/api/replays/archive", json={"archive_base64": payload})
+    assert loaded.status_code == 200
+    match_id = loaded.json()["match_id"]
+
+    replay = client.get(f"/api/replays/{match_id}/games/0?move=1")
+    assert replay.status_code == 200
+    assert replay.json()["move"] == 1
