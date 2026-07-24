@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import binascii
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Literal
 
@@ -18,7 +19,7 @@ _STATIC_DIR = Path(__file__).parent / "static"
 
 
 class NewGameRequest(BaseModel):
-    opponent: Literal["random", "trained"] = "random"
+    opponent: Literal["random", "minimax", "trained"] = "random"
     seed: int | None = None
     checkpoint_path: str | None = None
 
@@ -95,5 +96,13 @@ def create_app(service: ConnectFourGameService | None = None) -> FastAPI:
         except GameServiceError as error:
             raise HTTPException(status_code=422, detail=str(error)) from error
         return snapshot.__dict__
+
+    @app.get("/api/replays/{match_id}/summary")
+    def replay_summary(match_id: str) -> dict[str, object]:
+        try:
+            summary = game_service.summary(match_id)
+        except GameServiceError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+        return asdict(summary)
 
     return app

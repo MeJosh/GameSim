@@ -21,6 +21,7 @@
           <label for="opponent">Opponent</label>
           <select id="opponent" name="opponent">
             <option value="random">Random</option>
+            <option value="minimax">Minimax</option>
             <option value="trained">Trained policy</option>
           </select>
           <button id="new-game" type="button">New game</button>
@@ -36,6 +37,7 @@
           </label>
           <span id="replay-status" class="status" aria-live="polite"></span>
         </section>
+        <p id="match-summary" class="status" aria-live="polite"></p>
         <section id="replay-insights" class="replay-insights" hidden>
           <section class="chart" aria-labelledby="winner-chart-heading">
             <h2 id="winner-chart-heading">Wins</h2>

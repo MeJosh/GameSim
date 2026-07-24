@@ -13,6 +13,9 @@ from pathlib import Path
 from typing import Literal
 from uuid import uuid4
 
+from gamesim.agents.scripted import MinimaxAgent
+from gamesim.analysis.replay import replay_match_game
+from gamesim.analysis.summary import MatchSummary, summarize_match
 from gamesim.core.agent import Agent, RandomAgent
 from gamesim.core.replay import GameLog, replay_game
 from gamesim.core.types import AgentId
@@ -20,13 +23,18 @@ from gamesim.games.connect_four import ConnectFourEncoder, ConnectFourEngine, Co
 from gamesim.recording.match_log import MatchGameLog, MatchLog
 from gamesim.rl.train import DEFAULT_CHECKPOINT_DIR, DEFAULT_CHECKPOINT_NAME, MaskablePolicyAgent
 
-OpponentKind = Literal["random", "trained"]
+OpponentKind = Literal["random", "minimax", "trained"]
 PlayerKind = Literal["human", "opponent", "none"]
 OutcomeKind = Literal["in_progress", "human_won", "opponent_won", "draw"]
 ConnectFourAgent = Agent[ConnectFourObservation, int]
 TrainedAgentLoader = Callable[[Path], ConnectFourAgent]
 
 DEFAULT_CHECKPOINT_PATH = DEFAULT_CHECKPOINT_DIR / f"{DEFAULT_CHECKPOINT_NAME}.zip"
+
+# Matches the default used by gamesim.rl.record_matches' "minimax" agent spec (no
+# rest-of-string depth override is exposed through the web UI -- one sensible
+# default keeps the opponent selector a single dropdown option).
+_DEFAULT_MINIMAX_DEPTH = 4
 
 
 class GameServiceError(ValueError):
@@ -118,6 +126,8 @@ class ConnectFourGameService:
         engine.reset(seed=seed)
         if opponent == "random":
             agent: ConnectFourAgent = RandomAgent(seed=seed)
+        elif opponent == "minimax":
+            agent = MinimaxAgent(depth=_DEFAULT_MINIMAX_DEPTH)
         else:
             agent = self._trained_agent_loader(checkpoint_path)
 
@@ -188,6 +198,13 @@ class ConnectFourGameService:
             ],
         )
 
+    def summary(self, match_id: str) -> MatchSummary:
+        """Compute aggregate statistics for a previously uploaded match log."""
+        match_log = self._replays.get(match_id)
+        if match_log is None:
+            raise GameServiceError(f"unknown replay match: {match_id}")
+        return summarize_match(match_log)
+
     def replay_at(self, match_id: str, game_index: int, move: int) -> ReplaySnapshot:
         """Reconstruct a specific recorded turn through the authoritative engine."""
         match_log = self._replays.get(match_id)
@@ -196,19 +213,28 @@ class ConnectFourGameService:
         if not 0 <= game_index < len(match_log.games):
             raise GameServiceError(f"unknown game index: {game_index}")
         game = match_log.games[game_index]
-        if not 0 <= move <= len(game.actions):
-            raise GameServiceError(f"move must be between 0 and {len(game.actions)}")
+        total_moves = len(game.actions)
+        if not 0 <= move <= total_moves:
+            raise GameServiceError(f"move must be between 0 and {total_moves}")
 
-        engine = ConnectFourEngine()
-        replay_game(engine, self._game_log(game), up_to=move)
-        current_player = None if engine.is_terminal() else game.seats[int(engine.current_agent())]
+        # Board reconstruction is fully delegated to the shared engine-replay
+        # helper (gamesim.analysis.replay.replay_match_game) so the browser
+        # explorer and the standalone HTML report (3b) derive board state
+        # identically -- see docs/adr/0009-offline-analysis-and-reporting.md.
+        # Connect Four agents strictly alternate turns (ConnectFourEngine.step
+        # only ever toggles current_agent_index, it never skips a turn -- see
+        # games/connect_four/engine.py), so the seat to move after `move` plies
+        # is exactly `game.seats[move % 2]`; re-running the engine only to ask
+        # it that would just duplicate replay_match_game's work.
+        boards = replay_match_game(game)
+        current_player = None if move == total_moves else game.seats[move % 2]
         return ReplaySnapshot(
-            board=engine.observation(AgentId(0)).board.astype(int).tolist(),
+            board=boards[move],
             game_index=game.index,
             seats=list(game.seats),
             outcome=self._outcome_label(match_log, game),
             move=move,
-            total_moves=len(game.actions),
+            total_moves=total_moves,
             current_player=current_player,
         )
 

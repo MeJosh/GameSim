@@ -189,3 +189,16 @@ verified (0 network refs).
   outcome at the boundaries.
 - Safety: `</` → `<\/` in JSON blocks and `html.escape` on visible names (XSS guard);
   pinned by tests, plus empty-log and all-games (incl. flipped-seat + draw) board checks.
+
+## As-built notes — Slice 3c (2026-07-23) ✅
+Implemented; orchestrator-verified (full-game API smoke vs minimax to terminal, torch-free;
+`replay_at` parity logic checked). **125 tests pass + 1 skipped**; ruff + format + mypy
+--strict clean. (Self-verified rather than sub-agent-reviewed — low-risk wiring atop the
+already-reviewed 3a helpers; the novel work got a full review in 3a/3b/3d.)
+- Web opponent `minimax` added (`OpponentKind` now random/minimax/trained; depth 4); human
+  stays agent 0 / first mover; trained stays behind the torch-isolated loader seam.
+- `GET /api/replays/{match_id}/summary` returns `summarize_match(log)` as JSON (histogram/
+  distribution tuples → `[key, count]` arrays). Explorer UI shows outcomes/win-rates.
+- `game_service.replay_at` now delegates board reconstruction to `replay_match_game`
+  (the 3a-deferred reuse); `current_player = seats[move % 2]` (Connect Four never skips a
+  turn). `_validate_game` keeps its own engine replay (needs `rewards()`).

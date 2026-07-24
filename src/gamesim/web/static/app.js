@@ -9,6 +9,7 @@ const replayTab = document.querySelector("#replay-tab");
 const logFileElement = document.querySelector("#log-file");
 const replayStatusElement = document.querySelector("#replay-status");
 const dropZoneElement = document.querySelector("#drop-zone");
+const matchSummaryElement = document.querySelector("#match-summary");
 const replayInsightsElement = document.querySelector("#replay-insights");
 const winnerChartElement = document.querySelector("#winner-chart");
 const turnChartElement = document.querySelector("#turn-chart");
@@ -249,9 +250,29 @@ async function loadReplay(file) {
     replay = await response.json();
     if (!response.ok) throw new Error(replay.detail);
     replayStatusElement.textContent = `${replay.games.length} games loaded`;
+    await loadMatchSummary();
     await selectGame(0);
   } catch (error) {
     replayStatusElement.textContent = error.message;
+  }
+}
+
+async function loadMatchSummary() {
+  if (!replay) return;
+  matchSummaryElement.textContent = "";
+  try {
+    const response = await fetch(`/api/replays/${replay.match_id}/summary`);
+    const summary = await response.json();
+    if (!response.ok) throw new Error(summary.detail);
+    const percent = (rate) => `${(rate * 100).toFixed(1)}%`;
+    matchSummaryElement.textContent =
+      `${summary.agent_a} ${percent(summary.agent_a_win_rate)} wins, ` +
+      `${summary.agent_b} ${percent(summary.agent_b_win_rate)} wins, ` +
+      `${percent(summary.draw_rate)} draws over ${summary.total_games} games ` +
+      `(first-mover win rate ${percent(summary.first_mover_win_rate)}, ` +
+      `mean game length ${summary.game_length_mean.toFixed(1)} plies)`;
+  } catch (error) {
+    matchSummaryElement.textContent = error.message;
   }
 }
 
