@@ -122,3 +122,37 @@ def plain_rank(card: Card) -> int:
     valid for a card whose ``effective_suit`` is trump (use ``trump_rank`` instead).
     """
     return int(rank_of(card))
+
+
+# --- display formatting -------------------------------------------------------------
+# Shared by anything that needs a human-readable card/suit label: the analysis/report
+# layer today, a text renderer or CLI later. Kept here rather than duplicated at each
+# call site, same rationale as centralizing the bower rule above.
+
+SUIT_SYMBOLS: dict[Suit, str] = {
+    Suit.SPADES: "♠",
+    Suit.HEARTS: "♥",
+    Suit.DIAMONDS: "♦",
+    Suit.CLUBS: "♣",
+}
+
+RANK_LABELS: dict[Rank, str] = {
+    Rank.NINE: "9",
+    Rank.TEN: "10",
+    Rank.JACK: "J",
+    Rank.QUEEN: "Q",
+    Rank.KING: "K",
+    Rank.ACE: "A",
+}
+
+# Suits printed red in a standard deck -- used to color-code labels for display.
+RED_SUITS = frozenset({Suit.HEARTS, Suit.DIAMONDS})
+
+
+def suit_symbol(suit: Suit) -> str:
+    return SUIT_SYMBOLS[suit]
+
+
+def card_label(card: Card) -> str:
+    """Short human-readable label for ``card``, e.g. ``"JS"`` -> ``"J♠"``."""
+    return f"{RANK_LABELS[rank_of(card)]}{SUIT_SYMBOLS[suit_of(card)]}"

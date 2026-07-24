@@ -9,7 +9,7 @@ plans/phase-04-euchre.md. Plain state, no ECS -- see docs/architecture.md.
 from __future__ import annotations
 
 from .actions import NUM_ACTIONS, Action
-from .cards import Card, Suit
+from .cards import Card, Suit, card_label, suit_symbol
 from .engine import EuchreEngine, EuchreObservation
 from .state import EuchreRules, EuchreState, Phase
 
@@ -17,6 +17,8 @@ __all__ = [
     "NUM_ACTIONS",
     "Action",
     "Card",
+    "card_label",
+    "suit_symbol",
     "EuchreEngine",
     "EuchreObservation",
     "EuchreRules",

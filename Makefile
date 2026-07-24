@@ -154,6 +154,18 @@ REPORT_OUT ?= reports/connect_four_match.html
 report: ## Write a standalone, self-contained HTML match report from a recorded log (see options: ARGS="--help")
 	$(VENV_PY) -m gamesim.viz.report --log $(REPORT_LOG) --output $(REPORT_OUT) $(ARGS)
 
+EUCHRE_NUM_HANDS ?= 50
+EUCHRE_MATCH_LOG ?= logs/euchre_demo_match.zip
+EUCHRE_REPORT_OUT ?= reports/euchre_match.html
+
+.PHONY: record-euchre-demo
+record-euchre-demo: ## Record a demo Euchre match log (RandomAgent vs RandomAgent, no RL extras needed; see options: ARGS="--help")
+	$(VENV_PY) scripts/record_euchre_demo_match.py --num-hands $(EUCHRE_NUM_HANDS) --seed $(SEED) --output $(EUCHRE_MATCH_LOG) $(ARGS)
+
+.PHONY: report-euchre
+report-euchre: ## Write a standalone, self-contained HTML Euchre match report from a recorded log (see options: ARGS="--help")
+	$(VENV_PY) -m gamesim.viz.report_euchre --log $(EUCHRE_MATCH_LOG) --output $(EUCHRE_REPORT_OUT) $(ARGS)
+
 RUN_DIR ?= runs/incremental-smoke-001
 
 .PHONY: incremental-smoke

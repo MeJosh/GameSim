@@ -141,7 +141,14 @@ def deal_hand(rng: np.random.Generator) -> tuple[list[list[Card]], Card]:
     seats are filled in index order (0, 1, 2, 3) rather than physically simulating
     left-of-dealer dealing order.
     """
-    deck = list(rng.permutation(full_deck()))
+    # ``rng.permutation`` returns a numpy array (elements are ``np.int64``, not
+    # plain ``int``) -- cast explicitly so ``Card`` (== ``int``) is a real Python
+    # int everywhere downstream, not a numpy scalar that happens to duck-type as
+    # one. Without this, values compare/hash/step correctly (numpy ints behave
+    # like ints for arithmetic and equality) but silently fail ``json.dumps`` the
+    # first time something needs to serialize a hand -- e.g. the match-report
+    # snapshots in ``analysis.replay_euchre``.
+    deck = [int(card) for card in rng.permutation(full_deck())]
     hands = [list(deck[i * CARDS_PER_HAND : (i + 1) * CARDS_PER_HAND]) for i in range(NUM_PLAYERS)]
     upcard = deck[NUM_PLAYERS * CARDS_PER_HAND]
     return hands, upcard

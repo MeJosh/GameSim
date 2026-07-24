@@ -7,6 +7,17 @@ nothing in this package imports torch.
 """
 
 from .replay import replay_match_game
+from .replay_euchre import EuchreAction, EuchrePlySnapshot, replay_euchre_match_game
 from .summary import MatchSummary, summarize_match
+from .summary_euchre import EuchreMatchSummary, summarize_euchre_match
 
-__all__ = ["MatchSummary", "summarize_match", "replay_match_game"]
+__all__ = [
+    "MatchSummary",
+    "summarize_match",
+    "replay_match_game",
+    "EuchreAction",
+    "EuchrePlySnapshot",
+    "replay_euchre_match_game",
+    "EuchreMatchSummary",
+    "summarize_euchre_match",
+]

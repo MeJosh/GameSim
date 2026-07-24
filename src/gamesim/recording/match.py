@@ -3,29 +3,17 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
 
 import numpy as np
 
 from gamesim.core.agent import Agent
-from gamesim.core.events import Event
 from gamesim.core.replay import GameLog
 from gamesim.core.runner import run_game
 from gamesim.core.types import AgentId
 from gamesim.games.connect_four import ConnectFourEngine, ConnectFourObservation
 
 from .match_log import MatchGameLog, MatchLog, MatchOutcome
-
-
-@dataclass
-class _EventCollector:
-    events: list[Event]
-
-    def record(self, event: Event) -> None:
-        self.events.append(event)
-
-    def close(self) -> None:
-        return None
+from .recorder import EventCollector
 
 
 def record_match(
@@ -51,7 +39,7 @@ def record_match(
             if a_moves_first
             else {AgentId(0): agent_b, AgentId(1): agent_a}
         )
-        collector = _EventCollector(events=[])
+        collector = EventCollector()
         rewards = run_game(ConnectFourEngine(), agents, seed=game_seed, recorder=collector)
         outcome = _outcome(rewards, a_moves_first)
         game_log = GameLog.from_events(collector.events)

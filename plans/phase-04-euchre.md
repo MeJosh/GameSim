@@ -1,11 +1,12 @@
 # Phase 4 — Euchre: a second, larger, hidden-information game (detailed plan)
 
 **Status:** ✅ Engine complete, independently reviewed (approve with nits, no blocking
-bugs; nits addressed) — 53 tests green (240 total repo-wide); ruff, format,
-mypy --strict clean on `core` + `games`. See
-[progress/2026-07-24-phase-4-euchre.md](../progress/2026-07-24-phase-4-euchre.md) for
-as-built notes. DRL encoder, visualization, and the first-to-10 match wrapper are
-follow-ups, not required to close this phase (see that write-up's "What's next").
+bugs; nits addressed) — 53 tests green; ruff, format, mypy --strict clean on `core` +
+`games`. See [progress/2026-07-24-phase-4-euchre.md](../progress/2026-07-24-phase-4-euchre.md)
+for as-built notes. **Visualization (standalone HTML match report) is also done** —
+see [progress/2026-07-24-phase-4-euchre-viz.md](../progress/2026-07-24-phase-4-euchre-viz.md).
+DRL encoder, the interactive browser play UI, and the first-to-10 match wrapper
+remain open follow-ups (see that write-up's "What's next").
 
 **Goal:** Implement a 4-player, partnership Euchre engine against the existing `core`
 interfaces with **no changes to `core`**, proving the framework generalizes beyond
@@ -195,6 +196,9 @@ instead of re-deriving bower logic ad hoc.
 
 ## Out of scope for Phase 4
 
-Multi-hand match wrapper (first-to-10), DRL encoder/PettingZoo adapter for Euchre,
-visualization/renderer, ECS. Card-play strategy heuristics beyond `RandomAgent`. Those
+Multi-hand match wrapper (first-to-10), DRL encoder/PettingZoo adapter for Euchre, a
+live text/CLI renderer or interactive browser play UI, ECS. Card-play strategy
+heuristics beyond `RandomAgent`. (The standalone HTML match report *is* now built —
+see progress/2026-07-24-phase-4-euchre-viz.md — but the rest of this list still
+stands.) Those
 are natural Phase-4-followup or Phase-5-adjacent work once the engine itself is proven.
