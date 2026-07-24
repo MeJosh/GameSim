@@ -8,11 +8,13 @@ state, no ECS -- see docs/architecture.md and plans/phase-01-engine-core.md.
 from __future__ import annotations
 
 from .actions import Action
+from .encoder import ConnectFourEncoder
 from .engine import ConnectFourEngine, ConnectFourObservation
 from .state import NUM_COLUMNS, NUM_ROWS, ConnectFourState
 
 __all__ = [
     "Action",
+    "ConnectFourEncoder",
     "ConnectFourEngine",
     "ConnectFourObservation",
     "ConnectFourState",

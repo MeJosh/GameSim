@@ -273,10 +273,34 @@ def test_step_out_of_range_column_raises() -> None:
 # --- E. Observation boundary ---------------------------------------------------------
 
 
-def test_observation_well_formed_and_consistent_across_agents() -> None:
+def test_observation_board_is_agent_invariant_but_honors_the_queried_agent() -> None:
+    """``observation(agent)`` must honor its ``agent`` argument (review finding).
+
+    Connect Four has no hidden information, so the *board* is identical no matter
+    which agent asks. But the observation is nonetheless genuinely per-agent: it
+    must be built FOR the queried agent, not silently for whoever is on turn. This
+    replaces the old (buggy-behavior-matching) assertion that observations were
+    simply "identical across agents" -- that was true of the board only, and masked
+    the fact that ``observation(agent)`` used to ignore ``agent`` entirely.
+    """
     engine = new_engine()
     engine.step(AgentId(0), 3)
+    assert engine.current_agent() == AgentId(1)
+
     obs0 = engine.observation(AgentId(0))
     obs1 = engine.observation(AgentId(1))
+
+    # Board is agent-invariant (perfect information).
     assert obs0.board.shape == (NUM_ROWS, NUM_COLUMNS)
     assert np.array_equal(obs0.board, obs1.board)
+
+    # But each observation is genuinely built for the agent it was requested for.
+    assert obs0.perspective_agent == AgentId(0)
+    assert obs1.perspective_agent == AgentId(1)
+
+    # Only the on-turn agent (agent 1) has real legal actions right now; the
+    # inactive agent 0's observation carries an all-false mask -- a non-acting
+    # agent has no legal actions.
+    assert np.array_equal(obs1.legal_actions, engine.legal_actions(AgentId(1)))
+    assert np.any(obs1.legal_actions)
+    assert not np.any(obs0.legal_actions)

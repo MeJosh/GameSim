@@ -28,15 +28,23 @@ _DIRECTIONS: tuple[tuple[int, int], ...] = ((0, 1), (1, 0), (1, 1), (1, -1))
 
 @dataclass(frozen=True)
 class ConnectFourObservation:
-    """What an agent sees.
+    """What a specific agent sees, from that agent's own perspective.
 
-    Connect Four has no hidden information, so every agent's observation shows the
-    identical, full board (placeholder for the hidden-info boundary MTG will
-    exercise -- see plan test group E).
+    Connect Four has no hidden information, so ``board`` is identical no matter
+    which agent is asking (placeholder for the true hidden-info boundary MTG will
+    exercise -- see plan test group E). The observation is nonetheless genuinely
+    per-agent: ``perspective_agent`` names the agent it was built for (``observation
+    (agent)`` honors its argument -- it does NOT silently return whoever is on
+    turn), and ``legal_actions`` is that agent's *own* legal-move mask right now --
+    the engine's real legal moves iff ``perspective_agent`` is the on-turn agent and
+    the game isn't terminal, all-false otherwise (a non-acting or terminal agent has
+    no legal actions). This is what lets ``ConnectFourEncoder`` build the "mine"
+    plane from the queried agent's discs rather than whoever happens to be on turn.
     """
 
     board: npt.NDArray[np.int8]
-    current_agent: AgentId
+    perspective_agent: AgentId
+    legal_actions: ActionMask
 
 
 def _lowest_empty_row(board: npt.NDArray[np.int8], col: int) -> int | None:
@@ -148,8 +156,10 @@ class ConnectFourEngine:
 
     def observation(self, agent: AgentId) -> ConnectFourObservation:
         state = self._require_state()
+        is_on_turn = (not state.terminal) and agent == AgentId(state.current_agent_index)
+        mask = self.legal_actions(agent) if is_on_turn else np.zeros(NUM_COLUMNS, dtype=np.bool_)
         return ConnectFourObservation(
-            board=state.board.copy(), current_agent=AgentId(state.current_agent_index)
+            board=state.board.copy(), perspective_agent=agent, legal_actions=mask
         )
 
     def rewards(self) -> Mapping[AgentId, float]:

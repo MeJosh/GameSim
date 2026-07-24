@@ -109,6 +109,55 @@ in-sandbox.
 League/opponent-pool play beyond a single snapshot, hyperparameter tuning, and any second
 game (Phase 4). Reward shaping — keep the terminal-only signal.
 
+---
+
+## As-built notes — Slice 2a (2026-07-23)
+
+**Status:** ✅ **Complete** — implemented, independently reviewed (approve-with-nits),
+and findings fixed. 55 tests green (incl. the full PettingZoo `api_test`); ruff +
+mypy --strict clean over src + tests.
+
+**Delivered**
+- `games/connect_four/encoder.py` — `ConnectFourEncoder`.
+- `agents/` (new top-level package) — `MinimaxAgent` (alpha-beta, default depth 4).
+- `rl/pettingzoo_env.py` — `GameSimAECEnv` (generic AEC wrapper over `Engine` + `Encoder`).
+- `rl/evaluate.py` — `evaluate()` / `EvaluationResult`.
+- Tests: `tests/games/test_encoder.py`, `tests/agents/test_minimax.py`,
+  `tests/rl/test_pettingzoo_env.py`, `tests/rl/test_evaluate.py`.
+
+**Decisions**
+- **Encoder planes:** shape `(3, 6, 7)` float32, always from the *acting agent's*
+  perspective (canonical): plane 0 = my discs, plane 1 = opponent's, plane 2 = empty.
+  Plane 2 is redundant with 0+1 but kept as a cheap common signal.
+- **Masking source of truth:** the encoder's `action_mask` is board-derived (column
+  top-row occupancy) and matches `engine.legal_actions` in all non-terminal states; the
+  wrapper's `terminations` dict (from the engine) is the authority for episode end.
+- **AEC wrapper** is fully generic (no Connect-Four specifics), tracks
+  `engine.current_agent()` directly, uses standard dead-agent stepping, and passes
+  `pettingzoo.test.api_test`. Reusable for Phase 4's second game.
+- **Minimax** lives in `agents/scripted.py`, searches a private numpy board copy
+  (doesn't touch engine internals), deterministic tie-break (lowest column index),
+  returns an immediate win when available.
+- **Evaluation** alternates the first mover each game and draws per-game seeds from one
+  seeded RNG, so a whole run is reproducible.
+
+**✅ Resolved (was a review finding):** `ConnectFourEngine.observation(agent)` now
+**honors its `agent` argument**. `ConnectFourObservation` was enriched: `current_agent`
+→ `perspective_agent` (the agent the observation is for) plus a new `legal_actions`
+mask (the engine's real legal moves iff that agent is on turn and the game isn't
+terminal, else all-false). The encoder builds the "mine" plane from `perspective_agent`
+and returns `observation.legal_actions` directly, so **encoder `action_mask` ==
+`engine.legal_actions` by construction in every state, terminal included** (this also
+fixed the terminal-mask nit). AEC-loop behavior is unchanged (it always queries the
+on-turn agent); only previously-wrong non-active/terminal queries changed. The
+per-agent observation boundary is now genuinely exercised. Minimax docstring documents
+that exact win/block detection is guaranteed for `depth >= 2`.
+
+**Review outcome:** verdict approve-with-nits; the reviewer positively verified encoder
+perspective math, minimax tactics (independently checked alpha-beta against unpruned
+search), seat-swap win attribution in `evaluate()`, PettingZoo conformance, and the
+dependency direction. One real (dormant) bug found and fixed (above); nits addressed.
+
 ### Open questions to resolve during Phase 2
 - Exact observation plane design (2 vs 3 planes; include a legal-move plane?).
 - Snapshot refresh cadence and whether to keep a small opponent pool even now.
