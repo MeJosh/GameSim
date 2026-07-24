@@ -7,17 +7,22 @@ hot-swappable (policy / scripted / human) in the Runner.
 
 from __future__ import annotations
 
-from typing import Generic, Protocol
+from typing import Generic, Protocol, TypeVar
 
 import numpy as np
 
-from .types import ActionMask, ActionT, Observation
+from .types import ActionMask, Observation
+
+# Protocol variance: the observation is consumed (contravariant), the action is
+# produced (covariant). mypy --strict requires these to be annotated correctly.
+_ObsContra = TypeVar("_ObsContra", contravariant=True)
+_ActCo = TypeVar("_ActCo", covariant=True)
 
 
-class Agent(Protocol[Observation, ActionT]):
+class Agent(Protocol[_ObsContra, _ActCo]):
     """Anything that selects an action given what it can see."""
 
-    def act(self, observation: Observation, mask: ActionMask) -> ActionT:
+    def act(self, observation: _ObsContra, mask: ActionMask) -> _ActCo:
         """Return a legal action. Implementations must respect ``mask``."""
         ...
 

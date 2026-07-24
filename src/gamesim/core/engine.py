@@ -12,14 +12,14 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Generic, Protocol, runtime_checkable
+from typing import Protocol, TypeVar, runtime_checkable
 
 from .events import Event
-from .types import ActionMask, ActionT, AgentId, Observation
+from .types import ActionMask, AgentId
 
 
 @dataclass(frozen=True)
-class StepResult(Generic[ActionT]):
+class StepResult:
     """What the engine returns after applying one action."""
 
     terminal: bool
@@ -27,8 +27,14 @@ class StepResult(Generic[ActionT]):
     events: Sequence[Event] = field(default_factory=tuple)
 
 
+# Protocol variance: observations are produced by the engine (covariant); actions
+# are consumed by ``step`` (contravariant).
+_ObsCo = TypeVar("_ObsCo", covariant=True)
+_ActContra = TypeVar("_ActContra", contravariant=True)
+
+
 @runtime_checkable
-class Engine(Protocol[Observation, ActionT]):
+class Engine(Protocol[_ObsCo, _ActContra]):
     """Authoritative simulator for a single game.
 
     Implementations MUST:
@@ -54,14 +60,14 @@ class Engine(Protocol[Observation, ActionT]):
         """Boolean mask of currently-legal actions for ``agent``."""
         ...
 
-    def step(self, agent: AgentId, action: ActionT) -> StepResult[ActionT]:
+    def step(self, agent: AgentId, action: _ActContra) -> StepResult:
         """Validate and apply ``action`` for ``agent``; advance the game.
 
         Raises if the action is illegal or it is not ``agent``'s turn.
         """
         ...
 
-    def observation(self, agent: AgentId) -> Observation:
+    def observation(self, agent: AgentId) -> _ObsCo:
         """The subset of state ``agent`` is allowed to see."""
         ...
 

@@ -44,11 +44,29 @@ tests/      Test suite (TDD, red -> green)
 
 ## Getting started (dev)
 
+With `make` (macOS, Linux, WSL, or Git Bash on Windows):
+
 ```bash
-python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+make install   # create .venv and install the package + dev tools
+make test      # run the test suite
+make check     # lint + type-check + test (run before committing)
+```
+
+Run `make help` to list every target (`format`, `typecheck`, `test-cov`,
+`install-rl`, `clean`, ...).
+
+### Without make (e.g. native Windows PowerShell)
+
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1        # macOS/Linux: source .venv/bin/activate
+python -m pip install --upgrade pip
 pip install -e ".[dev]"
 pytest
 ```
+
+The DRL stack is a separate extra so you don't pull in torch until you start
+training: `make install-rl` (or `pip install -e ".[dev,rl]"`).
 
 See [`docs/architecture.md`](docs/architecture.md) for the design and
 [`plans/roadmap.md`](plans/roadmap.md) for what's being built next.

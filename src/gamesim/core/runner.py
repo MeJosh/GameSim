@@ -12,15 +12,16 @@ from collections.abc import Mapping
 
 from .agent import Agent
 from .engine import Engine
-from .types import AgentId
+from .types import ActionT, AgentId, Observation
 
-# Imported lazily/structurally to avoid a hard dependency; a recorder just needs a
-# ``record`` method. The concrete Recorder protocol lives in gamesim.recording.
+# The recorder is typed structurally as ``object`` on purpose: ``core`` must not
+# depend on the recording back-end (see docs/architecture.md dependency rule).
+# The Runner only needs something with a ``record`` method, wired in Phase 1.
 
 
 def run_game(
-    engine: Engine,
-    agents: Mapping[AgentId, Agent],
+    engine: Engine[Observation, ActionT],
+    agents: Mapping[AgentId, Agent[Observation, ActionT]],
     *,
     seed: int | None = None,
     recorder: object | None = None,
