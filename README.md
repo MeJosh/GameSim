@@ -82,6 +82,23 @@ pytest
 The DRL stack is a separate extra so you don't pull in torch until you start
 training: `make install-rl` (or `pip install -e ".[dev,rl]"`).
 
+### Local browser play
+
+The optional web adapter lets you play a locally adjudicated Connect Four game
+against a random baseline or a trained policy. It is deliberately outside the engine
+and training packages: the browser only submits columns, while the engine validates
+and applies every move.
+
+```bash
+make install-web
+make serve
+```
+
+Then open `http://127.0.0.1:8000`. Select **Trained policy** to use the default
+checkpoint at `checkpoints/connect_four_maskable_ppo.zip`; use the random opponent
+without the RL dependencies installed. The service is local and in-memory, so active
+games are not persisted when the server stops.
+
 After training, evaluate the saved policy against random and minimax baselines:
 
 ```bash

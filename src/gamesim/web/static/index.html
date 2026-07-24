@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>GameSim | Connect Four</title>
+    <link rel="stylesheet" href="/static/style.css">
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="eyebrow">GameSim local play</p>
+        <h1>Connect Four</h1>
+      </header>
+      <section class="controls" aria-label="Game setup">
+        <label for="opponent">Opponent</label>
+        <select id="opponent" name="opponent">
+          <option value="random">Random</option>
+          <option value="trained">Trained policy</option>
+        </select>
+        <button id="new-game" type="button">New game</button>
+      </section>
+      <p id="status" class="status" aria-live="polite">Starting game...</p>
+      <section id="board" class="board" aria-label="Connect Four board"></section>
+    </main>
+    <script src="/static/app.js"></script>
+  </body>
+</html>

@@ -53,6 +53,11 @@ install-rl: $(VENV_PY) ## Also install the DRL extras (Phase 2: torch, sb3, etc.
 	$(PIP) install -e ".[dev,rl]"
 	$(VENV_PY) -m pre_commit install
 
+.PHONY: install-web
+install-web: $(VENV_PY) ## Also install the local browser play UI
+	$(PIP) install -e ".[dev,web]"
+	$(VENV_PY) -m pre_commit install
+
 ## ---------------------------------------------------------------------------
 ## Quality gates
 ## ---------------------------------------------------------------------------
@@ -111,6 +116,10 @@ train: ## Train a Connect Four MaskablePPO agent via self-play (checkpoints/)
 .PHONY: evaluate
 evaluate: ## Evaluate a trained checkpoint vs random/minimax baselines
 	$(VENV_PY) -m gamesim.rl.evaluate --checkpoint $(CHECKPOINT) --opponent $(OPPONENT) --games $(GAMES) --seed $(SEED)
+
+.PHONY: serve
+serve: ## Run the local Connect Four browser UI (needs install-web)
+	$(VENV_PY) -m gamesim.web
 
 ## ---------------------------------------------------------------------------
 ## Housekeeping

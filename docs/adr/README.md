@@ -14,3 +14,4 @@ Format: each ADR states the **context**, the **decision**, and the **consequence
 | [0004](0004-maskable-ppo-via-library.md) | Start DRL with sb3-contrib MaskablePPO | Accepted |
 | [0005](0005-tdd-red-green.md) | Test-driven development (red → green) | Accepted |
 | [0006](0006-deterministic-event-logging.md) | Deterministic, event-sourced logging | Accepted |
+| [0007](0007-local-play-web-adapter.md) | Local play as a detachable web adapter | Accepted |
