@@ -111,6 +111,21 @@ Replay tab, choose that file, select a game from the left list, then use the arr
 buttons or left/right arrow keys to inspect each engine-reconstructed turn. Recording
 requires the RL and web extras: `pip install -e ".[dev,rl,web]"`.
 
+### Incremental training smoke run
+
+For a bounded overnight-style check of learning progress, run the exploratory
+experiment script directly rather than extending the normal training CLI:
+
+```bash
+python scripts/run_incremental_smoke.py --run-dir runs/incremental-smoke-001
+```
+
+It evaluates an untrained baseline, then continues one PPO model through 2,048,
+4,096, and 8,192 additional timesteps. Each of the four stages saves a checkpoint
+and a 1,000-game trained-versus-random replay ZIP under the supplied run directory.
+`progress.json` indexes the stage results for a later progress visualization. The
+script refuses to reuse an existing directory, so it cannot overwrite prior runs.
+
 After training, evaluate the saved policy against random and minimax baselines:
 
 ```bash

@@ -11,6 +11,7 @@ from collections.abc import Sequence
 from typing import SupportsFloat
 
 import numpy as np
+import numpy.typing as npt
 import pytest
 from gymnasium.spaces import Discrete
 
@@ -53,7 +54,7 @@ class _SequencePlayer:
         return column
 
     def as_opponent(self) -> OpponentPolicy:
-        def _policy(observation: np.ndarray, mask: ActionMask) -> int:
+        def _policy(observation: npt.NDArray[np.float32], mask: ActionMask) -> int:
             del observation
             column = self.next_column()
             assert mask[column], f"scripted opponent move {column} was illegal"
