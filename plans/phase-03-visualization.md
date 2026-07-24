@@ -174,3 +174,18 @@ ruff + format + mypy --strict clean; torch-free confirmed.
   now errors clearly.
 - **Deferred to 3c:** `web/game_service.py` still has its own replay logic; fold it onto
   `replay_match_game` in 3c.
+
+## As-built notes — Slice 3b (2026-07-23) ✅
+Implemented, independently reviewed (**Approve**, no blocking bugs — the reviewer ran the
+embedded JS under Node against a DOM stub to confirm step-through indexing), test-hardened.
+**118 tests pass + 1 skipped**; ruff + format + mypy --strict clean; self-contained
+verified (0 network refs).
+- `viz/report.py` — `render_match_report_html(log) -> str` and `write_match_report(log,
+  path)`; CLI `python -m gamesim.viz.report --log <zip> --output <html>`; `make report`.
+- Single self-contained HTML: inline CSS/JS, no CDN. Embeds two JSON `<script>` blocks —
+  `#match-data` (per-game `boards` from `replay_match_game`, engine truth) and
+  `#match-summary` (`summarize_match`). JS only reads the embedded data (no rules in JS):
+  game selector + first/prev/next/last, board render (row 0 bottom), who-is-to-move /
+  outcome at the boundaries.
+- Safety: `</` → `<\/` in JSON blocks and `html.escape` on visible names (XSS guard);
+  pinned by tests, plus empty-log and all-games (incl. flipped-seat + draw) board checks.

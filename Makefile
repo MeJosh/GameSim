@@ -128,6 +128,13 @@ record-matches: ## Record trained-vs-random games for replay in the browser UI
 serve: ## Run the local Connect Four browser UI (needs install-web)
 	$(VENV_PY) -m gamesim.web
 
+REPORT_LOG ?= logs/connect_four_trained_vs_random.zip
+REPORT_OUT ?= reports/connect_four_match.html
+
+.PHONY: report
+report: ## Write a standalone, self-contained HTML match report from a recorded log
+	$(VENV_PY) -m gamesim.viz.report --log $(REPORT_LOG) --output $(REPORT_OUT)
+
 ## ---------------------------------------------------------------------------
 ## Housekeeping
 ## ---------------------------------------------------------------------------
