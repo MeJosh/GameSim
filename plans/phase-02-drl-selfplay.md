@@ -158,6 +158,67 @@ perspective math, minimax tactics (independently checked alpha-beta against unpr
 search), seat-swap win attribution in `evaluate()`, PettingZoo conformance, and the
 dependency direction. One real (dormant) bug found and fixed (above); nits addressed.
 
+---
+
+## As-built notes — Slice 2b (2026-07-23)
+
+**Status:** ✅ **Complete** — implemented, independently reviewed (approve-with-nits, no
+blocking bugs), nits fixed. Torch-free parts verified in-sandbox (**70 tests pass** + 1
+`slow` training smoke test that skips cleanly without torch; ruff + mypy --strict clean).
+The MaskablePPO training loop itself is **not runnable in the dev sandbox** (torch can't
+be installed — PyTorch index proxy-blocked, wheel too large); it runs locally via
+`make install-rl` + `make train`.
+
+**Review outcome:** the reviewer independently verified the reward sign across **all six
+seat/outcome combinations** (the critical logic), the snapshot opponent's isolation
+(save/reload, no aliasing to the learner), the action-mask wiring through
+`ActionMasker`/`MaskablePPO`, and that torch imports are truly isolated
+(`import gamesim.rl.train` pulls in neither torch nor sb3). Nits fixed: the reward test
+now pins **both** learner seats for each outcome, and a dead test guard was removed.
+
+**Key design win:** the self-play environment is **torch-free**, so its wiring is fully
+tested in-sandbox; only the actual PPO optimization needs torch.
+
+**Delivered**
+- `rl/selfplay_env.py` — `SelfPlayEnv(gymnasium.Env)` (TORCH-FREE): presents the 2-player
+  engine from the learner's seat; opponent is an injected callable
+  `(encoded_obs, mask) -> action` (default: uniform-over-legal). `action_masks()`
+  accessor for MaskablePPO; `reset` randomizes the learner's seat (balanced self-play)
+  and auto-plays the opponent; reward from the learner's perspective (+1/−1/0). 12 tests.
+- `rl/train.py` (TORCH-DEPENDENT, imports isolated to function bodies / `TYPE_CHECKING`):
+  `train()` + `python -m gamesim.rl.train` CLI; `MaskablePPOSnapshotOpponent` and
+  `MaskablePolicyAgent` (adapts a trained model to the `Agent` protocol for `evaluate()`).
+- Self-play via a `SelfPlaySnapshotCallback`: every `refresh_every` steps it saves the
+  live model and reloads it as a frozen opponent (save/reload, not deepcopy, so the
+  opponent can't be mutated by ongoing gradients).
+- `tests/rl/test_selfplay_env.py` (runs here); `tests/rl/test_train_smoke.py`
+  (`@pytest.mark.slow` + `importorskip("sb3_contrib")`, skips here, runs locally).
+- `Makefile`: `make train` (+ `TIMESTEPS`/`SEED` overrides) and `make test-slow`.
+- `pyproject.toml`: a scoped `[[tool.mypy.overrides]]` (`torch.*`, `stable_baselines3.*`,
+  `sb3_contrib.*` → `ignore_missing_imports`) so `mypy` stays green without torch,
+  without weakening strict mode elsewhere.
+
+**Decisions / deviations to note**
+- **File naming:** the plan originally sketched `rl/selfplay.py`; as built it's
+  `rl/selfplay_env.py` (the torch-free env) + `rl/train.py` (the torch-dependent
+  trainer). This split is what keeps the env testable in-sandbox.
+- **Policy:** sb3 `"MlpPolicy"` (auto-flattens the `(3,6,7)` Box); `"CnnPolicy"`'s
+  NatureCNN needs larger inputs than a 6×7 board.
+- **`check_env` caveat:** Gymnasium's `env_checker` passes with a *deterministic*
+  opponent but not with the default *random* opponent (its RNG isn't reseeded by
+  `env.reset(seed=...)` — an external stateful callable is intentionally decoupled from
+  the env's seed contract; a frozen snapshot opponent has no "reseed" either).
+  Deliberate trade-off, verified manually.
+
+**Local training command**
+```
+make install-rl
+make train                    # TIMESTEPS=100000 SEED=0 by default
+make train TIMESTEPS=300000 SEED=1
+make test-slow                # runs the training smoke test once rl extras are installed
+```
+Checkpoints land in `checkpoints/` (gitignored).
+
 ### Open questions to resolve during Phase 2
 - Exact observation plane design (2 vs 3 planes; include a legal-move plane?).
 - Snapshot refresh cadence and whether to keep a small opponent pool even now.

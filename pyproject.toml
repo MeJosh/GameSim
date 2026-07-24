@@ -58,3 +58,16 @@ select = ["E", "F", "I", "UP", "B"]
 python_version = "3.10"
 strict = true
 files = ["src", "tests"]
+
+# Slice 2b (self-play training): torch/sb3 are optional, heavy, and not installed
+# in the dev sandbox (see plans/phase-02-drl-selfplay.md, "Sandbox vs. local").
+# `gamesim.rl.train` is the only module that touches them (imports are local/
+# TYPE_CHECKING-guarded there -- see its module docstring), so this override just
+# stops missing stubs/packages for these three from failing `make typecheck`
+# without weakening strict mode anywhere else. gymnasium/pettingzoo are installed
+# and fully typed (gymnasium ships py.typed; pettingzoo doesn't, hence the
+# `type: ignore[import-untyped]` at its one import site) so they are NOT listed
+# here on purpose.
+[[tool.mypy.overrides]]
+module = ["torch.*", "stable_baselines3.*", "sb3_contrib.*"]
+ignore_missing_imports = true

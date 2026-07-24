@@ -60,6 +60,10 @@ test: ## Run the test suite
 test-cov: ## Run tests with a coverage report
 	$(VENV_PY) -m pytest --cov=gamesim --cov-report=term-missing
 
+.PHONY: test-slow
+test-slow: ## Run the slow/opt-in tests (e.g. the training smoke test; needs install-rl)
+	$(VENV_PY) -m pytest -m slow
+
 .PHONY: lint
 lint: ## Check style with ruff
 	$(VENV_PY) -m ruff check src tests
@@ -75,6 +79,18 @@ typecheck: ## Static type-check with mypy (strict)
 
 .PHONY: check
 check: lint typecheck test ## Run all quality gates (do this before committing)
+
+## ---------------------------------------------------------------------------
+## Training (Phase 2b -- needs `make install-rl`; not run in the dev sandbox)
+## ---------------------------------------------------------------------------
+
+# Override on the command line, e.g.: make train TIMESTEPS=200000 SEED=1
+TIMESTEPS ?= 100000
+SEED ?= 0
+
+.PHONY: train
+train: ## Train a Connect Four MaskablePPO agent via self-play (checkpoints/)
+	$(VENV_PY) -m gamesim.rl.train --timesteps $(TIMESTEPS) --seed $(SEED)
 
 ## ---------------------------------------------------------------------------
 ## Housekeeping

@@ -20,16 +20,21 @@ game replays to an identical state; masking verified. → [phase-01-engine-core.
 **Done 2026-07-23:** 34 tests green, ruff + mypy --strict clean; independently reviewed
 (no blocking bugs). Built by sub agents, orchestrated.
 
-## Phase 2 — DRL integration + self-play  ◐
+## Phase 2 — DRL integration + self-play  ☑ (code-complete; training runs locally)
 PettingZoo AEC adapter + a Connect Four encoder (state↔tensor, mask passthrough). Train
 with `sb3-contrib` MaskablePPO via self-play. Evaluate vs. a random baseline and a
 simple minimax. Split into **2a foundation** (encoder, adapter, minimax, eval harness —
-no torch) and **2b training** (MaskablePPO self-play + smoke test). Full convergence runs
-happen on the user's machine (no GPU in the sandbox). → [phase-02-drl-selfplay.md](phase-02-drl-selfplay.md)
+no torch) and **2b training** (MaskablePPO self-play + smoke test). → [phase-02-drl-selfplay.md](phase-02-drl-selfplay.md)
 **Validates:** the engine↔DRL boundary, masking end-to-end, self-play loop, evaluation
 harness.
 **Exit:** a trained agent beats random ≫50% and is competitive vs. shallow minimax;
 training is reproducible from a seed.
+**Done 2026-07-23:** 70 tests green, ruff + mypy --strict clean; both slices
+independently reviewed (no blocking bugs). The self-play env is torch-free and fully
+tested here; the actual training loop is code-complete and runs on the user's machine
+(`make install-rl` + `make train`) — the sandbox can't install PyTorch (no GPU; index
+blocked). **Remaining to fully close Phase 2's exit criteria:** run training locally and
+confirm the trained agent beats random ≫50% / is competitive vs. minimax.
 
 ## Phase 3 — Visualization (live + replay)  ☐
 A Connect Four renderer. Two modes over one interface: attach to a live game, or load a
