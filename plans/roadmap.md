@@ -10,13 +10,15 @@ Legend: ☐ not started · ◐ in progress · ☑ done
 Docs, ADRs, roadmap, project skeleton, and the core interface stubs. TDD harness runs.
 **Exit:** `pytest` runs green on a scaffold; interfaces agreed. → detailed plan not needed.
 
-## Phase 1 — Engine core + Connect Four (TDD)  ☐
+## Phase 1 — Engine core + Connect Four (TDD)  ☑
 Implement the `core` interfaces and a Connect Four engine, driven red → green. Random
 agents play full games through the `Runner`. Deterministic logging + exact replay work.
 **Validates:** authoritative rules, action masking, per-agent observation boundary,
 determinism, event logging.
 **Exit:** two `RandomAgent`s play a legal game to a correct terminal result; a recorded
 game replays to an identical state; masking verified. → [phase-01-engine-core.md](phase-01-engine-core.md)
+**Done 2026-07-23:** 34 tests green, ruff + mypy --strict clean; independently reviewed
+(no blocking bugs). Built by sub agents, orchestrated.
 
 ## Phase 2 — DRL integration + self-play  ☐
 PettingZoo AEC adapter + a Connect Four encoder (state↔tensor, mask passthrough). Train

@@ -10,8 +10,11 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
+import numpy as np
+
 from .agent import Agent
 from .engine import Engine
+from .events import Event, GameStarted
 from .types import ActionT, AgentId, Observation
 
 # The recorder is typed structurally as ``object`` on purpose: ``core`` must not
@@ -28,8 +31,32 @@ def run_game(
 ) -> Mapping[AgentId, float]:
     """Drive one full game to termination and return final rewards.
 
-    NOTE: Phase-0 skeleton — the real implementation and its tests land in Phase 1
-    (plans/phase-01-engine-core.md, test group F). Kept minimal and dependency-light
-    on purpose.
+    The loop: ask the engine whose turn it is, get that agent's observation and
+    legal-action mask, ask the agent for an action, ``step`` the engine, forward
+    every emitted event to ``recorder`` (if given), repeat until terminal.
+
+    If ``seed`` is ``None`` a seed is generated so the game is still fully
+    determined and reproducible from the ``GameStarted`` event alone (the engine
+    owns a single seeded RNG -- see docs/adr/0006-deterministic-event-logging.md).
     """
-    raise NotImplementedError("Runner is implemented in Phase 1")
+    if seed is None:
+        seed = int(np.random.default_rng().integers(0, 2**31 - 1))
+
+    def _record(event: Event) -> None:
+        if recorder is not None:
+            recorder.record(event)  # type: ignore[attr-defined]
+
+    engine.reset(seed=seed)
+    _record(GameStarted(seed=seed, agents=tuple(engine.agents())))
+
+    while not engine.is_terminal():
+        current = engine.current_agent()
+        agent = agents[current]
+        observation = engine.observation(current)
+        mask = engine.legal_actions(current)
+        action = agent.act(observation, mask)
+        result = engine.step(current, action)
+        for event in result.events:
+            _record(event)
+
+    return engine.rewards()

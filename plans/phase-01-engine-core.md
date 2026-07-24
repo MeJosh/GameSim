@@ -4,6 +4,11 @@
 red → green, such that random agents play legal full games through the `Runner`, and any
 game can be logged and replayed to an identical state.
 
+**Status:** ✅ **Complete** — implemented, independently reviewed (approve-with-nits,
+no blocking bugs), and nits addressed. 34 tests green; ruff clean; mypy --strict clean
+over both `src` and `tests`. See "As-built notes" at the end for decisions and the
+review outcome.
+
 **Definition of done**
 - Two `RandomAgent`s play a complete, legal Connect Four game to a correct terminal
   outcome (win / draw), only ever choosing legal moves.
@@ -89,3 +94,62 @@ Connect Four = 7 columns × 6 rows; drop a disc into a non-full column; win = 4 
 
 DRL/training, encoders, the PettingZoo adapter, visualization, ECS. Those are Phases 2–4.
 Keep Connect Four's engine plain (no ECS) — it's the clarity baseline.
+
+---
+
+## As-built notes (implementation decisions & deviations)
+
+Recorded after the Phase 1 implementation pass so the plan matches reality.
+
+**Files delivered**
+- `games/connect_four/`: `actions.py` (`Action = int`, column index 0..6), `state.py`
+  (`ConnectFourState`, board constants), `engine.py` (`ConnectFourEngine`,
+  `ConnectFourObservation`).
+- `core/runner.py`: `run_game(engine, agents, *, seed=None, recorder=None)` fleshed out.
+- `core/replay.py`: `GameLog` + `replay_game(engine, log, up_to=...)`.
+- Tests: `tests/games/test_connect_four.py` (groups A–E, 17 tests),
+  `tests/core/test_runner.py` (group F + recorder parts of G, 6 tests),
+  `tests/core/test_replay.py` (group G, 3 tests). Plus the 6 pre-existing smoke tests
+  → 32 total.
+
+**Decisions worth remembering**
+- **Board orientation:** row 0 is the *bottom* (where discs land); a column is full when
+  its top row (`NUM_ROWS-1`) is occupied.
+- **Terminal representation:** `ConnectFourState` carries an explicit `terminal: bool`
+  distinct from `winner`, so a terminal *draw* (`winner=None, terminal=True`) is
+  distinguishable from an in-progress game.
+- **Engine is the sole event source:** `GameEnded` is emitted by the engine inside
+  `step()` when the game becomes terminal; the Runner only adds the opening
+  `GameStarted`. Matches architecture.md (§4) — renderers/recorders consume one stream.
+- **Seed handling:** `run_game` with `seed=None` generates a seed up front and records it
+  in `GameStarted`, so even "unspecified seed" games are reproducible from the log alone
+  ([ADR 0006](../docs/adr/0006-deterministic-event-logging.md)).
+- **`core` stays dependency-clean:** `replay.py` defines its own minimal `GameLog` with
+  two constructors — `from_events` (in-memory `Event` objects) and `from_records` (plain
+  dicts matching `Event.to_dict()`, e.g. JSON-decoded `.jsonl` lines) — so `core` can
+  replay real recorder output without importing `recording`. The Runner types `recorder`
+  as `object` and calls `.record(...)` under a scoped `# type: ignore[attr-defined]`.
+- **Draw test fixture:** a genuine 42-move drawn board is hard to hand-derive, so the
+  draw test uses a real column sequence produced by `RandomAgent` self-play against the
+  engine (hardcoded as `_DRAW_COLUMNS`). Deterministic and reproducible.
+
+**Follow-ups noted for later**
+- The observation boundary (test 16) is currently a full-board view (correct for a
+  perfect-information game). The hidden-information machinery it foreshadows is exercised
+  in Phase 5 (MTG), not here.
+
+**Review outcome & post-review changes (2026-07-23)**
+An independent Sonnet sub agent reviewed the implementation: verdict
+**approve-with-nits, no blocking bugs**. It positively verified all four win directions
+at corners/edges, masking in every state, validation (out-of-turn, full-column,
+out-of-range, post-terminal), determinism (byte-identical boards under same seed),
+replay (full + truncated), the reward convention, and the `core` dependency rule. Nits
+were then addressed:
+- Added tests for the **draw-terminal** path (`step` raises + all-false mask at a draw)
+  and for **out-of-range** column rejection (distinct from full-column). Test count
+  32 → **34**.
+- `current_agent()` post-terminal behavior **documented as unspecified** (callers must
+  check `is_terminal()` first); no turn-advance logic changed, to preserve determinism.
+- Added a **`py.typed`** marker (+ `package-data`) making the package PEP 561-compliant,
+  and extended `mypy --strict` to cover `tests` as well as `src` (26 files, clean).
+- Removed a redundant test assertion.
