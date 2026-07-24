@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.env
+
+# Testing / tooling
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# DRL artifacts
+runs/
+checkpoints/
+*.zip
+*.pt
+*.ckpt
+wandb/
+
+# Simulation logs (recorded games) — keep out of git by default
+logs/
+*.jsonl
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
