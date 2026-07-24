@@ -20,10 +20,12 @@ game replays to an identical state; masking verified. → [phase-01-engine-core.
 **Done 2026-07-23:** 34 tests green, ruff + mypy --strict clean; independently reviewed
 (no blocking bugs). Built by sub agents, orchestrated.
 
-## Phase 2 — DRL integration + self-play  ☐
+## Phase 2 — DRL integration + self-play  ◐
 PettingZoo AEC adapter + a Connect Four encoder (state↔tensor, mask passthrough). Train
 with `sb3-contrib` MaskablePPO via self-play. Evaluate vs. a random baseline and a
-simple minimax.
+simple minimax. Split into **2a foundation** (encoder, adapter, minimax, eval harness —
+no torch) and **2b training** (MaskablePPO self-play + smoke test). Full convergence runs
+happen on the user's machine (no GPU in the sandbox). → [phase-02-drl-selfplay.md](phase-02-drl-selfplay.md)
 **Validates:** the engine↔DRL boundary, masking end-to-end, self-play loop, evaluation
 harness.
 **Exit:** a trained agent beats random ≫50% and is competitive vs. shallow minimax;
